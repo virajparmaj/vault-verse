@@ -1,0 +1,56 @@
+# XcodeGen spec → run `xcodegen generate` to produce VaultVerse.xcodeproj.
+# The generated project is gitignored; this file is the source of truth.
+name: VaultVerse
+options:
+  bundleIdPrefix: com.vaultverse
+  createIntermediateGroups: true
+  deploymentTarget:
+    macOS: "14.0"
+
+packages:
+  VaultVerseCore:
+    path: .
+
+targets:
+  VaultVerse:
+    type: application
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: App
+    dependencies:
+      - package: VaultVerseCore
+        product: VaultVerseCore
+    info:
+      path: App/Resources/Info.plist
+      properties:
+        CFBundleDisplayName: VaultVerse
+        CFBundleName: VaultVerse
+        CFBundleShortVersionString: "0.1.0"
+        CFBundleVersion: "1"
+        LSMinimumSystemVersion: "14.0"
+        LSApplicationCategoryType: public.app-category.music
+        NSHumanReadableCopyright: "VaultVerse — your music memory, permanently archived."
+        ITSAppUsesNonExemptEncryption: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.vaultverse.app
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        GENERATE_INFOPLIST_FILE: NO
+        SWIFT_VERSION: "5.0"
+        CODE_SIGN_ENTITLEMENTS: App/Resources/VaultVerse.entitlements
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_HARDENED_RUNTIME: YES
+        SWIFT_EMIT_LOC_STRINGS: YES
+        ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS: NO
+
+schemes:
+  VaultVerse:
+    build:
+      targets:
+        VaultVerse: all
+    run:
+      config: Debug
+    test:
+      config: Debug
