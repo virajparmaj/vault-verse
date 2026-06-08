@@ -16,10 +16,25 @@ This repo was built with **Command Line Tools only** (no full Xcode):
 - [ ] Build the app once in Xcode and fix any SwiftData/SwiftUI API drift.
 - [ ] Confirm SwiftData container persistence path + migration story.
 
+## Local-first (current model)
+The app is now fully local-first and runs unsigned with **no MusicKit entitlement**:
+- ✅ Demo connector (`MockAppleMusicService`) + real-library connector
+  (`LibraryXMLConnector`, parses a Music "Export Library…" `.xml`).
+- ✅ Restore produces a **re-importable file** (`.m3u` + JSON + missing CSV) instead
+  of writing back to a provider.
+- ⚠️ Imported `.xml` access isn't persisted across launches (no security-scoped
+  bookmark yet) — re-pick the file each session to re-import. Already-imported data
+  stays in the vault and is fully viewable/exportable/restorable.
+
+## Deferred (paid-only)
+- [ ] **Live Apple Music write-back** — `LiveAppleMusicService` stays compiled behind
+      `#if canImport(MusicKit)` but is inert and never the default. Enabling it needs
+      the MusicKit capability + a **paid Apple Developer membership** and a
+      provisioning profile. Only then re-point a connector at it (opt-in).
+
 ## Medium
-- [ ] Live Apple Music: implement `LiveAppleMusicService` (MusicKit framework path
-      recommended) and add the MusicKit capability.
-- [ ] XCUITest E2E for connect → import → view → export → restore.
+- [ ] Persist `.xml` access via a security-scoped bookmark (re-import without re-picking).
+- [ ] XCUITest E2E for import → view → export → restore.
 - [ ] Artwork caching wired into the UI (service exists; not yet invoked on import).
 - [ ] `.fileExporter`-based "save as…" (currently exports to a default dir + reveal).
 

@@ -34,7 +34,6 @@ targets:
         NSHumanReadableCopyright: "VaultVerse — your music memory, permanently archived."
         ITSAppUsesNonExemptEncryption: false
         CFBundleIconName: AppIcon
-        NSAppleMusicUsageDescription: "VaultVerse reads your Apple Music library to archive playlist names, artwork, track order, and metadata. It never accesses or stores audio files."
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.vaultverse.app

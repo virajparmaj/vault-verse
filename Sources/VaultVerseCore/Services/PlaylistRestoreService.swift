@@ -53,6 +53,10 @@ public struct RestoreReport: Sendable, Hashable {
     public let skipped: Int
     public let failed: Int
     public let missingTracksCSVPath: String?
+    /// Re-importable playlist file produced by the local restore path.
+    public let m3uPath: String?
+    /// Full JSON backup produced by the local restore path.
+    public let jsonPath: String?
 }
 
 /// Runs the careful, transparent restore flow: preflight (no writes) → user
@@ -310,7 +314,114 @@ public struct PlaylistRestoreService: Sendable {
             restored: restored,
             skipped: skipped,
             failed: failed,
-            missingTracksCSVPath: missingURL?.path
+            missingTracksCSVPath: missingURL?.path,
+            m3uPath: nil,
+            jsonPath: nil
+        )
+    }
+
+    // MARK: - Step 3 (local): Build re-importable files instead of writing back
+
+    /// The local-first restore path. Instead of creating a playlist in a live
+    /// provider (which needs a paid MusicKit membership), this writes files the
+    /// user owns: an `.m3u` Music can re-import (real entries where the original
+    /// file location is known), a full JSON backup, and a CSV of anything without a
+    /// confident match. Nothing leaves the Mac; no provider write-back.
+    public func restoreToFile(restoreJobId: String, newPlaylistName: String? = nil, directory: URL? = nil) async throws -> RestoreReport {
+        guard var job = try await store.restoreJob(id: restoreJobId) else {
+            throw VaultVerseError.restoreJobNotFound(restoreJobId)
+        }
+        guard let snapshot = try await store.snapshot(id: job.snapshotId) else {
+            throw VaultVerseError.snapshotNotFound(job.snapshotId)
+        }
+        let snapshotTracks = try await store.snapshotTracks(snapshotId: job.snapshotId)
+
+        job.status = .running
+        try await store.upsertRestoreJob(job)
+
+        let playlistTitle: String
+        if let title = snapshot.playlistTitle {
+            playlistTitle = title
+        } else if let playlist = try await store.playlist(id: snapshot.playlistId) {
+            playlistTitle = playlist.title
+        } else {
+            playlistTitle = "Restored Playlist"
+        }
+        let name = newPlaylistName ?? "VaultVerse — \(playlistTitle)"
+
+        // Tracks with a confident/resolved match (mirrors confirm()'s selection).
+        var restoredTrackIds = Set<String>()
+        for snapshotTrack in snapshotTracks {
+            if try await resolvedProviderTrackId(trackId: snapshotTrack.trackId, provider: job.targetProvider) != nil {
+                restoredTrackIds.insert(snapshotTrack.trackId)
+            }
+        }
+
+        let exportService = ExportService(store: store)
+        let dir = directory ?? ExportService.defaultExportsDirectory()
+
+        // 1) Re-importable .m3u — every track, in order, locations where known.
+        let ordered = snapshotTracks.sorted { $0.position < $1.position }
+        let m3uTracks = ordered.map { st in
+            ExportService.M3UTrack(
+                title: st.title,
+                artist: st.artistName,
+                durationMs: st.durationMs,
+                localPath: ExportService.localFilePath(from: st.sourceProviderURI)
+            )
+        }
+        let m3uString = ExportService.m3uPlaylist(name: name, tracks: m3uTracks)
+        var m3uURL: URL?
+        if let data = m3uString.data(using: .utf8) {
+            m3uURL = try await exportService.writeAndRecord(
+                data: data, format: .m3u, playlistId: snapshot.playlistId, snapshotId: snapshot.id,
+                suggestedName: "restore \(playlistTitle)", directory: dir
+            ).url
+        }
+
+        // 2) Full JSON backup (re-importable into VaultVerse). Non-fatal if it fails.
+        var jsonURL: URL?
+        if let jsonData = try? await exportService.exportJSONData(playlistId: snapshot.playlistId) {
+            jsonURL = try? await exportService.writeAndRecord(
+                data: jsonData, format: .json, playlistId: snapshot.playlistId, snapshotId: snapshot.id,
+                suggestedName: "restore \(playlistTitle)", directory: dir
+            ).url
+        }
+
+        // 3) Missing-tracks CSV (no confident match).
+        let missingURL = try await writeMissingCSV(
+            snapshotTracks: snapshotTracks,
+            restoredTrackIds: restoredTrackIds,
+            addedProviderIds: [],
+            provider: job.targetProvider,
+            playlistTitle: playlistTitle,
+            directory: dir
+        )
+
+        let total = snapshotTracks.count
+        let restored = restoredTrackIds.count
+        let skipped = max(0, total - restored)
+
+        job.createdTargetPlaylistName = name
+        job.matchedTracks = restored
+        job.failedTracks = 0
+        job.unmatchedTracks = skipped
+        job.status = .succeeded
+        job.completedAt = Date()
+        try await store.upsertRestoreJob(job)
+
+        return RestoreReport(
+            restoreJobId: job.id,
+            targetProvider: job.targetProvider,
+            createdPlaylistId: nil,
+            createdPlaylistName: name,
+            total: total,
+            restored: restored,
+            skipped: skipped,
+            failed: 0,
+            missingTracksCSVPath: missingURL?.path,
+            m3uPath: m3uURL?.path,
+            jsonPath: jsonURL?.path
         )
     }
 

@@ -104,6 +104,70 @@ public struct ExportService: Sendable {
         return data
     }
 
+    // MARK: M3U
+
+    /// One line item for an M3U playlist.
+    public struct M3UTrack: Sendable {
+        public let title: String
+        public let artist: String
+        public let durationMs: Int?
+        /// Filesystem path of the local audio file, when known (from a `file://` URI).
+        public let localPath: String?
+
+        public init(title: String, artist: String, durationMs: Int?, localPath: String?) {
+            self.title = title
+            self.artist = artist
+            self.durationMs = durationMs
+            self.localPath = localPath
+        }
+    }
+
+    /// Build an Extended M3U playlist. Tracks with a local file path become real
+    /// entries Music can re-import; the rest are kept as comments so the playlist's
+    /// full intent is preserved even when the audio file isn't on this Mac.
+    public static func m3uPlaylist(name: String, tracks: [M3UTrack]) -> String {
+        var lines = ["#EXTM3U", "#PLAYLIST:\(name)"]
+        for track in tracks {
+            let seconds = track.durationMs.map { max(0, $0 / 1000) } ?? -1
+            lines.append("#EXTINF:\(seconds),\(track.artist) - \(track.title)")
+            if let path = track.localPath, !path.isEmpty {
+                lines.append(path)
+            } else {
+                lines.append("# (no local file) \(track.artist) - \(track.title)")
+            }
+        }
+        return lines.joined(separator: "\n") + "\n"
+    }
+
+    public func exportSnapshotM3UData(snapshotId: String, name: String? = nil) async throws -> Data {
+        guard let snapshot = try await store.snapshot(id: snapshotId) else {
+            throw VaultVerseError.snapshotNotFound(snapshotId)
+        }
+        let snapshotTracks = try await store.snapshotTracks(snapshotId: snapshot.id)
+        let playlistName = name ?? snapshot.playlistTitle ?? "VaultVerse Playlist"
+        let tracks = snapshotTracks
+            .sorted { $0.position < $1.position }
+            .map { st in
+                M3UTrack(
+                    title: st.title,
+                    artist: st.artistName,
+                    durationMs: st.durationMs,
+                    localPath: Self.localFilePath(from: st.sourceProviderURI)
+                )
+            }
+        let m3u = Self.m3uPlaylist(name: playlistName, tracks: tracks)
+        guard let data = m3u.data(using: .utf8) else {
+            throw VaultVerseError.exportFailed("M3U encode")
+        }
+        return data
+    }
+
+    /// Convert a stored `file://` URI into a filesystem path for M3U; nil otherwise.
+    static func localFilePath(from uri: String?) -> String? {
+        guard let uri, uri.hasPrefix("file://"), let url = URL(string: uri) else { return nil }
+        return url.path
+    }
+
     // MARK: Write + record
 
     @discardableResult

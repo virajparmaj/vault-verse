@@ -25,7 +25,7 @@ struct RestoreFlowView: View {
                 case .review:
                     if let preflight { reviewSection(preflight) }
                 case .restoring:
-                    loadingCard("Creating the playlist and adding tracks…")
+                    loadingCard("Writing the re-importable playlist file…")
                 case .done:
                     if let report { reportSection(report) }
                 }
@@ -43,7 +43,7 @@ struct RestoreFlowView: View {
     // MARK: Stepper
 
     private var stepper: some View {
-        let steps = ["Preflight", "Review", "Create", "Report"]
+        let steps = ["Preflight", "Review", "Build file", "Report"]
         let active: Int = {
             switch phase {
             case .loading: return 0
@@ -102,7 +102,7 @@ struct RestoreFlowView: View {
                     summaryStat("\(preflight.unavailableCount)", "unavailable", VaultTheme.warmGrey)
                     summaryStat("\(preflight.unmatchedCount)", "unmatched", VaultTheme.softRed)
                 }
-                Text("Nothing is created in Apple Music until you confirm.")
+                Text("VaultVerse builds a re-importable playlist file — nothing leaves your Mac and nothing is written to Apple Music.")
                     .font(.caption).foregroundStyle(VaultTheme.mutedTan)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -119,7 +119,7 @@ struct RestoreFlowView: View {
             Button {
                 Task { await confirm() }
             } label: {
-                Label("Create playlist & add \(preflight.confidentCount + resolvedCount) tracks", systemImage: "checkmark.circle.fill")
+                Label("Build re-importable playlist file (\(preflight.total) tracks)", systemImage: "square.and.arrow.down.on.square")
                     .frame(maxWidth: .infinity)
             }
             .controlSize(.large)
@@ -177,19 +177,26 @@ struct RestoreFlowView: View {
 
     private func reportSection(_ report: RestoreReport) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Label("Restore complete", systemImage: "checkmark.seal.fill")
+            Label("Restore file ready", systemImage: "checkmark.seal.fill")
                 .font(.title3.weight(.semibold)).foregroundStyle(VaultTheme.vaultGreen)
             Text(report.createdPlaylistName ?? "Restored playlist").font(.headline).foregroundStyle(VaultTheme.warmCream)
+            Text("Import the .m3u into Music (File → Import\u{2026}) to rebuild this playlist. Tracks with a confident match are counted below.")
+                .font(.caption).foregroundStyle(VaultTheme.mutedTan)
             HStack(spacing: 18) {
-                summaryStat("\(report.restored)", "restored", VaultTheme.vaultGreen)
-                summaryStat("\(report.skipped)", "skipped", VaultTheme.warmGrey)
-                summaryStat("\(report.failed)", "failed", VaultTheme.softRed)
+                summaryStat("\(report.restored)", "matched", VaultTheme.vaultGreen)
+                summaryStat("\(report.skipped)", "needs review", VaultTheme.warmGrey)
                 summaryStat("\(report.total)", "total", VaultTheme.warmCream)
             }
-            if let path = report.missingTracksCSVPath {
-                Button {
-                    revealInFinder(path)
-                } label: { Label("Download list of missing songs (CSV)", systemImage: "arrow.down.doc") }
+            VStack(alignment: .leading, spacing: 8) {
+                if let path = report.m3uPath {
+                    Button { revealInFinder(path) } label: { Label("Open .m3u playlist file", systemImage: "music.note.list") }
+                }
+                if let path = report.jsonPath {
+                    Button { revealInFinder(path) } label: { Label("Open JSON backup", systemImage: "doc.text") }
+                }
+                if let path = report.missingTracksCSVPath {
+                    Button { revealInFinder(path) } label: { Label("List of songs that need review (CSV)", systemImage: "arrow.down.doc") }
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -197,8 +204,6 @@ struct RestoreFlowView: View {
     }
 
     // MARK: Actions
-
-    private var resolvedCount: Int { unmatched.filter { $0.resolvedAt != nil }.count }
 
     private func runPreflight() async {
         phase = .loading
@@ -232,7 +237,7 @@ struct RestoreFlowView: View {
         guard let preflight else { return }
         phase = .restoring
         do {
-            report = try await env.restoreService.confirm(restoreJobId: preflight.restoreJobId, newPlaylistName: nil)
+            report = try await env.restoreService.restoreToFile(restoreJobId: preflight.restoreJobId, newPlaylistName: nil)
             phase = .done
         } catch {
             errorText = error.localizedDescription

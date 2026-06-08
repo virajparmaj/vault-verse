@@ -5,7 +5,9 @@ Two layers, split by what can be built/tested without Xcode.
 ## `VaultVerseCore` (Swift Package — all product logic)
 - **Models/** — immutable value-type domain structs + enums.
 - **Providers/** — `MusicProviderConnector` protocol + DTOs; `MockAppleMusicService`
-  (seed-data backed) and `LiveAppleMusicService` (stub).
+  (seed-data backed), `LibraryXMLConnector` (parses a real exported `Library.xml`),
+  and `LiveAppleMusicService` (deferred, paid-only MusicKit — behind
+  `#if canImport(MusicKit)`, inert/`providerNotConfigured` otherwise; never default).
 - **Services/** — `TrackNormalizer`, `TrackMatchingService`, `PlaylistImportService`,
   `SnapshotService`, `PlaylistRestoreService`, `ExportService`, `AnalyticsService`.
 - **Persistence/** — repository protocols (`VaultStore`) + `InMemoryVaultStore`
@@ -17,9 +19,11 @@ Everything here is provider-neutral and fully unit-testable via `swift test`.
 ## `VaultVerse` (Xcode app — thin UI shell)
 - **Persistence/** — `SwiftDataVaultStore` (`@ModelActor`) implementing `VaultStore`,
   plus `@Model` entities + mappers to/from domain structs.
-- **AppEnvironment** — `@Observable` DI container; picks the connector (mock now),
-  owns the store, vends services. Falls back to `InMemoryVaultStore` if SwiftData
-  can't initialize.
+- **AppEnvironment** — `@Observable` DI container; selects the connector via a
+  persisted `LibrarySource` (demo `MockAppleMusicService` or real
+  `LibraryXMLConnector`), owns the store, vends services. `activate(source:connector:)`
+  swaps in a fresh connector immutably. Falls back to `InMemoryVaultStore` if
+  SwiftData can't initialize.
 - **Features/**, **Components/**, **Theme/** — SwiftUI, `NavigationSplitView` shell.
 
 ## Key decisions & trade-offs

@@ -56,19 +56,29 @@ struct SettingsView: View {
             .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(VaultTheme.warmAmber.opacity(0.3), lineWidth: 1))
     }
 
+    private var sourceBinding: Binding<LibrarySource> {
+        Binding(get: { env.source }, set: { env.selectSource($0) })
+    }
+
     private var privacyCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             SectionHeader(title: "Your data, your control")
-            HStack {
-                Text("Apple Music connection").font(.subheadline).foregroundStyle(VaultTheme.warmCream)
-                Spacer()
-                if env.isConnected {
-                    Button("Disconnect") { Task { await env.disconnect() } }
-                        .tint(VaultTheme.warmAmber)
-                } else {
-                    Text("Not connected").font(.caption).foregroundStyle(VaultTheme.mutedTan)
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Library source").font(.subheadline).foregroundStyle(VaultTheme.warmCream)
+                    Text(env.source.detail).font(.caption).foregroundStyle(VaultTheme.mutedTan)
                 }
+                Spacer()
+                Picker("", selection: sourceBinding) {
+                    ForEach(LibrarySource.allCases) { source in
+                        Text(source.title).tag(source)
+                    }
+                }
+                .labelsHidden()
+                .frame(width: 210)
             }
+            Text("Switch to \u{201C}Apple Music export\u{201D}, then import your .xml from Connections.")
+                .font(.caption2).foregroundStyle(VaultTheme.mutedTan)
             Divider().overlay(VaultTheme.divider)
             HStack {
                 VStack(alignment: .leading, spacing: 1) {

@@ -20,7 +20,7 @@ struct RestoreView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Restore my library").font(.system(.title2, design: .rounded).weight(.semibold)).foregroundStyle(VaultTheme.warmCream)
-                        Text("Rebuild playlists into Apple Music after resubscribing or switching devices. VaultVerse checks every song before creating anything.")
+                        Text("Rebuild a playlist as a re-importable file you can drop back into Music (File → Import\u{2026}). VaultVerse checks every song first — nothing is written to Apple Music.")
                             .font(.subheadline).foregroundStyle(VaultTheme.mutedTan)
                     }
                     if entries.isEmpty && loaded {

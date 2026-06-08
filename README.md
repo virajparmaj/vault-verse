@@ -11,10 +11,12 @@ versioned snapshots.
 > VaultVerse is **not** a streaming app. It stores playlist *structure and
 > metadata only* — never audio files, never a way around DRM.
 
-This first pass is **Apple Music–first** and runs entirely on a **mock connector
-with realistic demo data**, so the whole product loop works without any Apple
-credentials. A real MusicKit connector is stubbed behind the same interface,
-ready to switch on later.
+VaultVerse is **local-first**: it runs on **any Mac with no paid Apple Developer
+account, no MusicKit entitlement, and no code signing**. Start with built-in
+**demo data** (zero setup), or import your **real library** from a Music
+"Export Library…" `.xml` — both connectors work entirely on your machine with no
+account. (A MusicKit live connector exists behind the same interface but is
+**deferred and paid-only**; see the bottom of this README.)
 
 ---
 
@@ -22,18 +24,21 @@ ready to switch on later.
 
 The complete core loop, end-to-end:
 
-**Connect (mock) → import playlists → save metadata/order/artwork locally →
-version as snapshots → browse the vault → export JSON/CSV → restore (with
-preflight + manual match resolution) → review report.**
+**Load demo *or* import your real `Library.xml` → save metadata/order/artwork
+locally → version as snapshots → browse the vault → export JSON/CSV → restore to a
+re-importable file (with preflight + manual match resolution) → review report.**
 
 Highlights:
+- **Two local sources** — built-in demo data, or your real library from a Music
+  "Export Library…" `.xml`. No account, no MusicKit, no signing.
 - **Versioned snapshots** — re-importing never overwrites; it appends a new,
   checksummed version. "No material change" is detected and skipped.
 - **ISRC-first track matching** with a 0–100 confidence ladder and fuzzy fallback.
 - **Careful restore** — a no-writes *preflight* shows `confident / review /
-  unavailable / unmatched` before anything is created.
+  unavailable / unmatched`, then VaultVerse builds a re-importable **`.m3u` + JSON**
+  you can drop back into Music. Nothing is written to Apple Music.
 - **Manual match memory** — resolve a track once and it's remembered forever.
-- **Open exports** — full JSON backup + human-readable CSV. No lock-in.
+- **Open exports** — full JSON backup + human-readable CSV + M3U. No lock-in.
 - **Local-first & private** — single user, offline after import, Keychain for any
   secrets, one-tap "delete all data".
 
@@ -45,12 +50,13 @@ Two layers:
 
 | Layer | What | Build/test |
 |---|---|---|
-| **`VaultVerseCore`** (Swift Package) | All product logic: models, provider connectors, services (import / match / snapshot / restore / export / analytics), repositories. Provider-neutral. | `swift build` / `swift test` — **fully tested (48 tests)** |
+| **`VaultVerseCore`** (Swift Package) | All product logic: models, provider connectors, services (import / match / snapshot / restore / export / analytics), repositories. Provider-neutral. | `swift build` / `swift test` — **fully tested (56 tests)** |
 | **`VaultVerse`** (Xcode app) | SwiftUI UI + SwiftData persistence. Thin shell over the package. | Requires **Xcode** (`xcodegen` + build) |
 
 The connector abstraction (`MusicProviderConnector`) is the seam that keeps one
-neutral internal format while supporting many platforms. Apple Music ships first
-(`MockAppleMusicService` now, `LiveAppleMusicService` stubbed); Spotify/YouTube
+neutral internal format while supporting many sources. Two local connectors ship
+today — `MockAppleMusicService` (demo) and `LibraryXMLConnector` (real exported
+`Library.xml`); `LiveAppleMusicService` (MusicKit) is deferred/paid. Spotify/YouTube
 conform later without touching services or UI.
 
 ```
@@ -58,7 +64,7 @@ vault-verse/
 ├── Package.swift                 # VaultVerseCore + vaultverse-demo + tests
 ├── Sources/VaultVerseCore/       # Models, Providers, Services, Persistence, Security, Support
 ├── Sources/vaultverse-demo/      # headless core-loop walkthrough
-├── Tests/VaultVerseCoreTests/    # 48 unit + integration tests (swift-testing)
+├── Tests/VaultVerseCoreTests/    # 56 unit + integration tests (swift-testing)
 ├── App/                          # SwiftUI app target (built in Xcode)
 │   ├── Features/  Components/  Theme/  Persistence/ (SwiftData)
 ├── project.yml                   # XcodeGen spec → VaultVerse.xcodeproj
@@ -107,21 +113,38 @@ open VaultVerse.xcodeproj
 ### 4. Build and run in Xcode
 
 1. In the top toolbar, set the scheme to **VaultVerse** and the run target to **My Mac**.
-2. If prompted for signing: enable **Automatically manage signing** and pick your
-   personal Apple ID team (running on your own Mac needs no paid account).
-3. Press **⌘R** to build and run.
+2. Press **⌘R** to build and run. No signing is required — VaultVerse needs no
+   MusicKit entitlement and no paid Apple Developer account.
+
+Prefer the command line? Build an unsigned app without opening Xcode:
+
+```bash
+xcodebuild -project VaultVerse.xcodeproj -scheme VaultVerse \
+  -configuration Release -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
+# → build/Build/Products/Release/VaultVerse.app
+```
 
 ### 5. Operate the app
 
-The app ships with realistic **demo data** — no Apple Music account needed.
+VaultVerse is local-first — no account needed for either source.
 
-1. Go to **Connections → Connect & import** to load the demo library.
+1. Go to **Connections** and choose a source:
+   - **Load demo library** — realistic sample data, zero setup; or
+   - **Import from Apple Music export (.xml)** — your real library (see below).
 2. Open **Library** and browse your imported playlists.
 3. Open any playlist to see its tracks, artwork, and snapshot history.
 4. **Export** a playlist to JSON or CSV (open backups, no lock-in).
 5. **Restore** a playlist — review the preflight (`confident / review / unavailable
-   / unmatched`) before anything is created, and resolve unmatched tracks manually.
-6. **Settings** → export everything or delete all data, one action each.
+   / unmatched`), then VaultVerse builds a re-importable **`.m3u` + JSON**. Import
+   the `.m3u` back into Music with **File → Import…**. Nothing is written to Apple Music.
+6. **Settings** → switch library source, export everything, or delete all data.
+
+#### Import your real Apple Music library
+
+1. Open the **Music** app on your Mac.
+2. Menu bar → **File → Library → Export Library…**
+3. Save the `.xml` somewhere you can find it.
+4. In VaultVerse: **Connections → Import from Apple Music export (.xml)** → choose that file.
 
 > **Troubleshooting:** if the build fails on the two SwiftData files (`@Model` /
 > `@ModelActor`), you're still on Command Line Tools — redo **step 2**. Those
@@ -135,7 +158,7 @@ The app ships with realistic **demo data** — no Apple Music account needed.
 
 ```bash
 swift build                 # compile VaultVerseCore
-swift test                  # run the 48-test suite
+swift test                  # run the 56-test suite
 swift run vaultverse-demo   # headless: connect → import → snapshot → export → restore
 ```
 
@@ -151,27 +174,28 @@ xcodegen generate           # → VaultVerse.xcodeproj (from project.yml)
 open VaultVerse.xcodeproj   # build & run in Xcode (⌘R)
 ```
 
-In the app: **Connections → Connect & import** loads the demo library, then browse
-**Library**, open a playlist, **Export** or **Restore**.
+In the app: **Connections → Load demo library** (or **Import from Apple Music
+export (.xml)**), then browse **Library**, open a playlist, **Export** or **Restore**.
 
-> **Toolchain note:** this repo was developed with Command Line Tools only, so the
-> Swift package + demo are verified here. The SwiftUI app's view layer (16 files)
-> is type-checked against the SDK, but the two SwiftData files (`@Model` /
-> `@ModelActor` macros) and the full app build require **full Xcode** — those
-> macros don't ship with CLT. See `notes/05_known_gaps.md`.
+> **Toolchain note:** the Swift package + demo build/test with Command Line Tools.
+> The full app build (SwiftData `@Model` / `@ModelActor` macros) requires **full
+> Xcode**. The app builds **unsigned** with no MusicKit entitlement (see the
+> `xcodebuild … CODE_SIGNING_ALLOWED=NO` command above). See `notes/05_known_gaps.md`.
 
 ---
 
-## Going live with Apple Music
+## Live Apple Music write-back (deferred — paid only)
 
-Everything is wired for it; flip the switch when you have credentials:
+VaultVerse never writes back to Apple Music on the default, local-first path; that
+capability is **optional and requires a paid Apple Developer membership**.
+`LiveAppleMusicService` is already implemented behind `#if canImport(MusicKit)` and
+stays inert (`providerNotConfigured`) until you opt in. To enable it later:
 
-1. Add the **MusicKit** capability to the `VaultVerse` target (adds
-   `com.apple.developer.musickit` to the entitlements).
-2. Implement `LiveAppleMusicService` (it's stubbed with the exact API calls
-   documented inline — MusicKit framework path *or* Apple Music REST + ES256
-   developer token).
-3. Point `AppEnvironment` at the live connector. No other layer changes.
+1. Add the **MusicKit** capability to the `VaultVerse` target (re-adds
+   `com.apple.developer.musickit` to the entitlements) — this needs a provisioning
+   profile with the MusicKit service, i.e. a **paid** membership.
+2. Construct `LiveAppleMusicService()` explicitly and route a connector at it
+   (it's opt-in; the app never selects it by default). No other layer changes.
 
 ---
 
@@ -187,6 +211,7 @@ Everything is wired for it; flip the switch when you have credentials:
 
 ## Roadmap
 
-Live MusicKit → Spotify & YouTube connectors (same interface) → cloud sync (swap
-the repository impl) → iOS/iPadOS sharing the package → Replay/Wrapped labeling &
-timeline-of-taste. See `notes/06_roadmap.md`.
+Persist imported `.xml` access (security-scoped bookmark) → Spotify & YouTube
+connectors (same interface) → live Apple Music write-back (deferred, paid) → cloud
+sync (swap the repository impl) → iOS/iPadOS sharing the package → Replay/Wrapped
+labeling & timeline-of-taste. See `notes/06_roadmap.md`.

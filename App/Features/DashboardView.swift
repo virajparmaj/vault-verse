@@ -119,12 +119,12 @@ struct DashboardView: View {
             EmptyStateView(
                 systemImage: "tray.and.arrow.down",
                 title: "Your vault is empty",
-                message: "Connect Apple Music and import your playlists to start your permanent archive."
+                message: "Load the demo library to explore, or import your real one from Connections (Music → File → Library → Export Library…)."
             )
             Button {
-                Task { await env.connectAndImport(); await load() }
+                Task { await env.loadDemoLibrary(); await load() }
             } label: {
-                Label(env.isImporting ? "Importing…" : "Connect & import playlists", systemImage: "arrow.down.circle")
+                Label(env.isImporting ? "Importing…" : "Load demo library", systemImage: "sparkles")
             }
             .buttonStyle(.borderedProminent)
             .disabled(env.isImporting)

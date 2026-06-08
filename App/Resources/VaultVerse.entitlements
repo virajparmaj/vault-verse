@@ -8,11 +8,14 @@
 	<!-- Network client: only to fetch + cache playlist artwork (never audio). -->
 	<key>com.apple.security.network.client</key>
 	<true/>
-	<!-- User-selected files: write JSON/CSV exports the user chooses to save. -->
+	<!-- User-selected files: read an exported Library.xml; write JSON/CSV/M3U the user saves. -->
 	<key>com.apple.security.files.user-selected.read-write</key>
 	<true/>
-	<!-- MusicKit: required for Apple Music library read/write access. -->
-	<key>com.apple.developer.musickit</key>
-	<true/>
+	<!--
+	  FUTURE (live Apple Music): add the MusicKit capability in Signing &
+	  Capabilities, which adds `com.apple.developer.musickit` here. It requires a
+	  provisioning profile with the MusicKit service enabled (paid Apple Developer
+	  membership) — not needed while the app runs on the local connectors.
+	-->
 </dict>
 </plist>

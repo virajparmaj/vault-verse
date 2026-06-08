@@ -5,12 +5,19 @@ import MusicKit
 
 /// Live Apple Music connector powered by MusicKit.
 ///
+/// **Deferred, opt-in, paid-only.** VaultVerse is local-first by default
+/// (`MockAppleMusicService` demo data + `LibraryXMLConnector` for real libraries).
+/// This connector stays compiled but is never the default: enabling it needs the
+/// MusicKit capability, which requires a paid Apple Developer membership and a
+/// provisioning profile with the MusicKit service. Construct it explicitly only
+/// once those are in place.
+///
 /// Uses MusicKit's `MusicAuthorization` for the system permission prompt and
 /// `MusicDataRequest` for all API calls (it adds the developer token and music
 /// user token automatically — no `.p8` / JWT management needed for a native app).
 ///
-/// When building outside Xcode (pure SPM / CI), MusicKit is unavailable; every
-/// method falls back to throwing `notImplemented` so tests still compile.
+/// When MusicKit is unavailable (pure SPM / CI / no entitlement), every method
+/// throws `providerNotConfigured` so the app stays usable on the local connectors.
 public struct LiveAppleMusicService: MusicProviderConnector {
     public let provider: Provider = .appleMusic
 
@@ -296,30 +303,34 @@ public struct LiveAppleMusicService: MusicProviderConnector {
     }
 
     // ╔══════════════════════════════════════════════════════════════════════╗
-    // ║  Stubs (pure SPM / CI builds where MusicKit is unavailable)        ║
+    // ║  Inert (no MusicKit: pure SPM / CI / entitlement absent)           ║
     // ╚══════════════════════════════════════════════════════════════════════╝
+    //
+    // Without the MusicKit framework + capability there is nothing to talk to, so
+    // every method reports `providerNotConfigured`. The app never selects this
+    // connector by default; it's opt-in once a paid membership is in place.
     #else
 
     public func authenticate() async throws -> AuthSession {
-        throw VaultVerseError.notImplemented("MusicKit is not available in this build environment.")
+        throw VaultVerseError.providerNotConfigured(.appleMusic)
     }
     public func fetchUserProfile(auth: AuthSession) async throws -> ProviderUserProfile {
-        throw VaultVerseError.notImplemented("MusicKit is not available.")
+        throw VaultVerseError.providerNotConfigured(.appleMusic)
     }
     public func fetchUserPlaylists(auth: AuthSession) async throws -> [ProviderPlaylist] {
-        throw VaultVerseError.notImplemented("MusicKit is not available.")
+        throw VaultVerseError.providerNotConfigured(.appleMusic)
     }
     public func fetchPlaylistTracks(auth: AuthSession, providerPlaylistId: String) async throws -> [ProviderTrack] {
-        throw VaultVerseError.notImplemented("MusicKit is not available.")
+        throw VaultVerseError.providerNotConfigured(.appleMusic)
     }
     public func searchTrack(auth: AuthSession, query: TrackSearchQuery) async throws -> [ProviderTrackSearchResult] {
-        throw VaultVerseError.notImplemented("MusicKit is not available.")
+        throw VaultVerseError.providerNotConfigured(.appleMusic)
     }
     public func createPlaylist(auth: AuthSession, input: CreatePlaylistInput) async throws -> CreatedPlaylist {
-        throw VaultVerseError.notImplemented("MusicKit is not available.")
+        throw VaultVerseError.providerNotConfigured(.appleMusic)
     }
     public func addTracks(auth: AuthSession, providerPlaylistId: String, providerTrackIds: [String]) async throws -> AddTracksResult {
-        throw VaultVerseError.notImplemented("MusicKit is not available.")
+        throw VaultVerseError.providerNotConfigured(.appleMusic)
     }
 
     #endif
