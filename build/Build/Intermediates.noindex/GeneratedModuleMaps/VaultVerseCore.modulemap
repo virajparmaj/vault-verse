@@ -1,4 +1,0 @@
-module VaultVerseCore {
-header "VaultVerseCore-Swift.h"
-export *
-}

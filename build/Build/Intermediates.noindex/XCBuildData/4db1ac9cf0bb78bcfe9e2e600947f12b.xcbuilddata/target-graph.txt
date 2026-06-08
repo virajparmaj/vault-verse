@@ -1,9 +1,0 @@
-Target dependency graph (4 targets)
-Target 'VaultVerse' in project 'VaultVerse'
-➜ Explicit dependency on target 'VaultVerseCore' in project 'VaultVerse'
-Target 'VaultVerseCore' in project 'VaultVerse'
-➜ Explicit dependency on target 'VaultVerseCore' in project 'VaultVerse'
-➜ Explicit dependency on target 'VaultVerse_VaultVerseCore' in project 'VaultVerse'
-Target 'VaultVerseCore' in project 'VaultVerse'
-➜ Explicit dependency on target 'VaultVerse_VaultVerseCore' in project 'VaultVerse'
-Target 'VaultVerse_VaultVerseCore' in project 'VaultVerse' (no dependencies)
