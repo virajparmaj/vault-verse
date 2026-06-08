@@ -1,0 +1,16 @@
+{
+  "source": "/Users/veerr_89/Work/tools/vault-verse/App/Features/LibraryView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Library",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 39
+        }
+      }
+    ]
+  },
+  "version": 1
+}

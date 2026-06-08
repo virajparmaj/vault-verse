@@ -12,8 +12,8 @@ struct ProviderBadge: View {
         }
         .font(.caption2.weight(.semibold))
         .padding(.horizontal, 7).padding(.vertical, 3)
-        .background(VaultTheme.lcdBlue.opacity(0.25))
-        .foregroundStyle(VaultTheme.actionBlue)
+        .background(VaultTheme.cherryPink.opacity(0.15))
+        .foregroundStyle(VaultTheme.cherryPink)
         .clipShape(Capsule())
     }
 }
@@ -24,9 +24,17 @@ struct MappingConfidenceBadge: View {
         Text("\(score)")
             .font(.caption2.weight(.bold).monospacedDigit())
             .padding(.horizontal, 7).padding(.vertical, 3)
-            .background(VaultTheme.confidenceColor(score).opacity(0.16))
-            .foregroundStyle(VaultTheme.confidenceColor(score))
+            .background(color.opacity(0.16))
+            .foregroundStyle(color)
             .clipShape(Capsule())
+    }
+    /// High confidence reads as the brand cherry; lower tiers fall back to semantic colors.
+    private var color: Color {
+        switch score {
+        case 80...: return VaultTheme.cherryPink
+        case 60..<80: return VaultTheme.warmAmber
+        default: return VaultTheme.softRed
+        }
     }
 }
 
@@ -50,10 +58,10 @@ struct OutcomeBadge: View {
     }
     private var color: Color {
         switch outcome {
-        case .confident: return Color(hex: 0x3E8E5E)
-        case .review: return Color(hex: 0xB8772E)
-        case .unavailable: return VaultTheme.mutedGrey
-        case .unmatched: return Color(hex: 0xA23B3B)
+        case .confident: return VaultTheme.vaultGreen
+        case .review: return VaultTheme.warmAmber
+        case .unavailable: return VaultTheme.warmGrey
+        case .unmatched: return VaultTheme.softRed
         }
     }
 }
@@ -67,14 +75,14 @@ struct StatTile: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
-                if let systemImage { Image(systemName: systemImage).foregroundStyle(VaultTheme.actionBlue) }
+                if let systemImage { Image(systemName: systemImage).foregroundStyle(VaultTheme.cherryPink) }
                 Text(title.uppercased())
                     .font(.caption2.weight(.semibold))
-                    .foregroundStyle(VaultTheme.mutedGrey)
+                    .foregroundStyle(VaultTheme.mutedTan)
             }
             Text(value)
                 .font(.system(.title2, design: .rounded).weight(.semibold).monospacedDigit())
-                .foregroundStyle(VaultTheme.graphite)
+                .foregroundStyle(VaultTheme.warmCream)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .vaultCard()
@@ -86,14 +94,14 @@ struct ReadinessRing: View {
     var size: CGFloat = 64
     var body: some View {
         ZStack {
-            Circle().stroke(VaultTheme.hairline, lineWidth: 7)
+            Circle().stroke(VaultTheme.brushedBronze, lineWidth: 7)
             Circle()
                 .trim(from: 0, to: max(0, min(1, Double(percent) / 100)))
                 .stroke(VaultTheme.confidenceColor(percent), style: StrokeStyle(lineWidth: 7, lineCap: .round))
                 .rotationEffect(.degrees(-90))
             Text("\(percent)%")
                 .font(.system(.caption, design: .rounded).weight(.bold).monospacedDigit())
-                .foregroundStyle(VaultTheme.graphite)
+                .foregroundStyle(VaultTheme.warmCream)
         }
         .frame(width: size, height: size)
     }
@@ -106,8 +114,8 @@ struct SectionHeader: View {
     var subtitle: String? = nil
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(title).font(.headline).foregroundStyle(VaultTheme.graphite)
-            if let subtitle { Text(subtitle).font(.caption).foregroundStyle(VaultTheme.mutedGrey) }
+            Text(title).font(.headline).foregroundStyle(VaultTheme.warmCream)
+            if let subtitle { Text(subtitle).font(.caption).foregroundStyle(VaultTheme.mutedTan) }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -119,9 +127,9 @@ struct EmptyStateView: View {
     let message: String
     var body: some View {
         VStack(spacing: 10) {
-            Image(systemName: systemImage).font(.system(size: 38)).foregroundStyle(VaultTheme.brushedSilver)
-            Text(title).font(.headline).foregroundStyle(VaultTheme.graphite)
-            Text(message).font(.subheadline).foregroundStyle(VaultTheme.mutedGrey)
+            Image(systemName: systemImage).font(.system(size: 38)).foregroundStyle(VaultTheme.cherryPink)
+            Text(title).font(.headline).foregroundStyle(VaultTheme.warmCream)
+            Text(message).font(.subheadline).foregroundStyle(VaultTheme.mutedTan)
                 .multilineTextAlignment(.center).frame(maxWidth: 360)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -140,20 +148,14 @@ struct ArtworkThumbnail: View {
             if let url, let parsed = URL(string: url) {
                 AsyncImage(url: parsed) { image in
                     image.resizable().aspectRatio(contentMode: .fill)
-                } placeholder: { placeholder }
+                } placeholder: { MiniVinylPlaceholder(size: size, label: initials) }
             } else {
-                placeholder
+                MiniVinylPlaceholder(size: size, label: initials)
             }
         }
         .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(VaultTheme.hairline, lineWidth: 1))
-    }
-    private var placeholder: some View {
-        ZStack {
-            VaultTheme.brushedMetal
-            Text(initials).font(.system(.headline, design: .rounded).weight(.bold)).foregroundStyle(VaultTheme.brushedSilver)
-        }
+        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(VaultTheme.brushedBronze, lineWidth: 1))
     }
     private var initials: String {
         let parts = title.split(separator: " ").prefix(2).compactMap { $0.first }
@@ -173,13 +175,13 @@ struct PlaylistCard: View {
             HStack(spacing: 12) {
                 ArtworkThumbnail(url: playlist.artworkURL, title: playlist.title, size: 64)
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(playlist.title).font(.headline).foregroundStyle(VaultTheme.graphite).lineLimit(2)
+                    Text(playlist.title).font(.headline).foregroundStyle(VaultTheme.warmCream).lineLimit(2)
                     ProviderBadge(provider: playlist.sourceProvider)
                 }
                 Spacer()
                 ReadinessRing(percent: readinessPercent, size: 52)
             }
-            Divider().overlay(VaultTheme.hairline)
+            Divider().overlay(VaultTheme.divider)
             HStack {
                 metric("\(playlist.trackCount)", "tracks")
                 Spacer()
@@ -193,8 +195,8 @@ struct PlaylistCard: View {
 
     private func metric(_ value: String, _ label: String) -> some View {
         VStack(spacing: 1) {
-            Text(value).font(.subheadline.weight(.semibold).monospacedDigit()).foregroundStyle(VaultTheme.graphite)
-            Text(label).font(.caption2).foregroundStyle(VaultTheme.mutedGrey)
+            Text(value).font(.subheadline.weight(.semibold).monospacedDigit()).foregroundStyle(VaultTheme.warmCream)
+            Text(label).font(.caption2).foregroundStyle(VaultTheme.mutedTan)
         }
     }
 

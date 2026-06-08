@@ -1,0 +1,72 @@
+{
+  "source": "/Users/veerr_89/Work/tools/vault-verse/App/Features/DashboardView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Dashboard",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 26
+        }
+      },
+      {
+        "comment": "",
+        "key": "Your playlists are safe, even when your subscriptions are not.",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 32
+        }
+      },
+      {
+        "comment": "",
+        "key": "VaultVerse archives playlist names, artwork, track order, artists, albums, and platform IDs. It never stores music files.",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 35
+        }
+      },
+      {
+        "comment": "",
+        "key": "RESTORE READINESS",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 47
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld ready",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 51
+        }
+      },
+      {
+        "comment": "",
+        "key": "to restore",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 52
+        }
+      },
+      {
+        "comment": "",
+        "key": "Importing…",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 102
+        }
+      },
+      {
+        "comment": "",
+        "key": "Connect & import (demo)",
+        "location": {
+          "startingColumn": 58,
+          "startingLine": 102
+        }
+      }
+    ]
+  },
+  "version": 1
+}

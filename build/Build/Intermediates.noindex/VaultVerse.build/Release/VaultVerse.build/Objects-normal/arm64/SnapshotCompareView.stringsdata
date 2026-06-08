@@ -1,0 +1,40 @@
+{
+  "source": "/Users/veerr_89/Work/tools/vault-verse/App/Features/SnapshotCompareView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Compare snapshots",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 26
+        }
+      },
+      {
+        "comment": "",
+        "key": "Title: “%@” → “%@”",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 57
+        }
+      },
+      {
+        "comment": "",
+        "key": "None",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 81
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ (%lld)",
+        "location": {
+          "startingColumn": 19,
+          "startingLine": 79
+        }
+      }
+    ]
+  },
+  "version": 1
+}

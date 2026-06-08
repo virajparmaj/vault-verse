@@ -5,6 +5,8 @@ import Foundation
 public enum VaultVerseError: Error, LocalizedError, Sendable, Hashable {
     /// The live provider has no usable credentials configured yet.
     case providerNotConfigured(Provider)
+    /// The user denied authorization for the provider (e.g. MusicKit prompt).
+    case authorizationDenied(Provider)
     /// A live code path that is intentionally stubbed for the first pass.
     case notImplemented(String)
     case authenticationFailed(String)
@@ -27,6 +29,8 @@ public enum VaultVerseError: Error, LocalizedError, Sendable, Hashable {
         switch self {
         case .providerNotConfigured(let p):
             return "\(p.displayName) isn't configured yet. Add credentials in Settings to use the live connection."
+        case .authorizationDenied(let p):
+            return "VaultVerse needs permission to access your \(p.displayName) library. Open System Settings → Privacy & Security → Media & Apple Music to grant access."
         case .notImplemented(let what):
             return "Not available in this build: \(what)."
         case .authenticationFailed(let why):

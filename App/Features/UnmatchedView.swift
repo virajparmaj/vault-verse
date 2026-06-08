@@ -10,9 +10,9 @@ struct UnmatchedView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Needs review").font(.system(.title2, design: .rounded).weight(.semibold))
+                    Text("Needs review").font(.system(.title2, design: .rounded).weight(.semibold)).foregroundStyle(VaultTheme.warmCream)
                     Text("These songs need review. They may be unavailable, renamed, region-locked, or missing from the target catalog.")
-                        .font(.subheadline).foregroundStyle(VaultTheme.mutedGrey)
+                        .font(.subheadline).foregroundStyle(VaultTheme.mutedTan)
                 }
                 if items.isEmpty && loaded {
                     EmptyStateView(systemImage: "checkmark.seal", title: "Nothing to review", message: "Every song in your restores was confidently matched.")
@@ -21,18 +21,22 @@ struct UnmatchedView: View {
                 }
             }
             .padding(24)
+            .frame(maxWidth: .infinity)
+            .background(alignment: .center) {
+                if !items.isEmpty { Watermark(kind: .brokenRecord, size: 220) }
+            }
         }
         .navigationTitle("Unmatched")
-        .background(VaultTheme.offWhite)
+        .background(VaultTheme.deepCocoa)
         .task { await load() }
     }
 
     private func row(_ item: UnmatchedTrack) -> some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(item.title).font(.subheadline.weight(.medium)).foregroundStyle(VaultTheme.graphite)
-                Text(item.artist).font(.caption).foregroundStyle(VaultTheme.mutedGrey)
-                Text(item.reason).font(.caption2).foregroundStyle(Color(hex: 0xB8772E))
+                Text(item.title).font(.subheadline.weight(.medium)).foregroundStyle(VaultTheme.warmCream)
+                Text(item.artist).font(.caption).foregroundStyle(VaultTheme.mutedTan)
+                Text(item.reason).font(.caption2).foregroundStyle(VaultTheme.warmAmber)
             }
             Spacer()
             ProviderBadge(provider: item.attemptedProvider)

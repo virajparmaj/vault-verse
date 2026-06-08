@@ -30,30 +30,85 @@ struct RootView: View {
 
     var body: some View {
         NavigationSplitView {
-            List(SidebarItem.allCases, selection: $selection) { item in
-                Label(item.rawValue, systemImage: item.icon)
-                    .tag(item)
-            }
-            .navigationSplitViewColumnWidth(min: 200, ideal: 220, max: 280)
-            .safeAreaInset(edge: .top) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("VaultVerse")
-                        .font(.system(.title3, design: .rounded).weight(.bold))
-                        .foregroundStyle(VaultTheme.graphite)
-                    Text("Your music memory, archived.")
-                        .font(.caption)
-                        .foregroundStyle(VaultTheme.mutedGrey)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .background(VaultTheme.brushedMetal)
-            }
+            sidebar
+                .navigationSplitViewColumnWidth(min: 210, ideal: 230, max: 280)
         } detail: {
             detail(for: selection ?? .dashboard)
-                .background(VaultTheme.offWhite)
+                .background(VaultTheme.deepCocoa)
         }
     }
+
+    // MARK: Sidebar
+
+    private var sidebar: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            brandHeader
+            Divider().overlay(VaultTheme.brushedBronze)
+            ScrollView {
+                VStack(spacing: 4) {
+                    ForEach(SidebarItem.allCases) { navRow($0) }
+                }
+                .padding(.horizontal, 10)
+                .padding(.top, 10)
+            }
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background {
+            ZStack {
+                VaultTheme.deepCocoa
+                SpeakerGrilleTexture()
+            }
+            .ignoresSafeArea()
+        }
+    }
+
+    private var brandHeader: some View {
+        HStack(spacing: 10) {
+            BrandEmblem(size: 28)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("VaultVerse")
+                    .font(.system(.title3, design: .rounded).weight(.bold))
+                    .foregroundStyle(VaultTheme.warmCream)
+                Text("Your music memory, archived.")
+                    .font(.caption)
+                    .foregroundStyle(VaultTheme.mutedTan)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+    }
+
+    private func navRow(_ item: SidebarItem) -> some View {
+        let selected = selection == item
+        return Button {
+            selection = item
+        } label: {
+            HStack(spacing: 9) {
+                if selected {
+                    RecordDot(diameter: 7)
+                } else {
+                    Color.clear.frame(width: 7, height: 7)
+                }
+                Image(systemName: item.icon).frame(width: 18)
+                Text(item.rawValue)
+                    .font(.subheadline.weight(selected ? .semibold : .regular))
+                Spacer(minLength: 0)
+            }
+            .foregroundStyle(selected ? VaultTheme.cherryPink : VaultTheme.mutedTan)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .background {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(selected ? VaultTheme.cherryPink.opacity(0.12) : Color.clear)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: Detail router
 
     @ViewBuilder
     private func detail(for item: SidebarItem) -> some View {

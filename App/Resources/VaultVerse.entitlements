@@ -11,11 +11,8 @@
 	<!-- User-selected files: write JSON/CSV exports the user chooses to save. -->
 	<key>com.apple.security.files.user-selected.read-write</key>
 	<true/>
-	<!--
-	  FUTURE (live Apple Music): add the MusicKit capability in Signing &
-	  Capabilities, which adds `com.apple.developer.musickit` here. It requires a
-	  provisioning profile with the MusicKit service enabled — not needed while
-	  the app runs on the mock connector.
-	-->
+	<!-- MusicKit: required for Apple Music library read/write access. -->
+	<key>com.apple.developer.musickit</key>
+	<true/>
 </dict>
 </plist>

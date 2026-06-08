@@ -20,14 +20,14 @@ struct PlaylistDetailView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             header
-            Divider().overlay(VaultTheme.hairline)
+            Divider().overlay(VaultTheme.divider)
             if rows.isEmpty {
                 EmptyStateView(systemImage: "music.note.list", title: "No tracks in this snapshot", message: "This version of the playlist has no tracks.")
             } else {
                 trackTable
             }
         }
-        .background(VaultTheme.offWhite)
+        .background(VaultTheme.deepCocoa)
         .navigationTitle(playlist?.title ?? "Playlist")
         .task { await load() }
         .alert("Export", isPresented: Binding(get: { alertMessage != nil }, set: { if !$0 { alertMessage = nil } })) {
@@ -42,14 +42,14 @@ struct PlaylistDetailView: View {
             HStack(alignment: .top, spacing: 16) {
                 ArtworkThumbnail(url: playlist?.artworkURL, title: playlist?.title ?? "", size: 96)
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(playlist?.title ?? "—").font(.system(.title2, design: .rounded).weight(.semibold))
+                    Text(playlist?.title ?? "—").font(.system(.title2, design: .rounded).weight(.semibold)).foregroundStyle(VaultTheme.warmCream)
                     if let description = playlist?.description {
-                        Text(description).font(.subheadline).foregroundStyle(VaultTheme.mutedGrey).lineLimit(2)
+                        Text(description).font(.subheadline).foregroundStyle(VaultTheme.mutedTan).lineLimit(2)
                     }
                     HStack(spacing: 8) {
                         if let provider = playlist?.sourceProvider { ProviderBadge(provider: provider) }
-                        Text("\(playlist?.trackCount ?? 0) tracks").font(.caption).foregroundStyle(VaultTheme.mutedGrey)
-                        Text("· \(snapshots.count) snapshots").font(.caption).foregroundStyle(VaultTheme.mutedGrey)
+                        Text("\(playlist?.trackCount ?? 0) tracks").font(.caption).foregroundStyle(VaultTheme.mutedTan)
+                        Text("· \(snapshots.count) snapshots").font(.caption).foregroundStyle(VaultTheme.mutedTan)
                     }
                 }
                 Spacer()
@@ -61,12 +61,17 @@ struct PlaylistDetailView: View {
             }
         }
         .padding(20)
-        .background(VaultTheme.brushedMetal)
+        .background {
+            ZStack {
+                VaultTheme.bronzePanel
+                StaffLines()
+            }
+        }
     }
 
     private var snapshotPicker: some View {
         HStack(spacing: 6) {
-            Image(systemName: "clock.arrow.circlepath").foregroundStyle(VaultTheme.mutedGrey)
+            Image(systemName: "clock.arrow.circlepath").foregroundStyle(VaultTheme.mutedTan)
             Picker("Snapshot", selection: Binding(get: { selectedSnapshotId ?? "" }, set: { newValue in
                 selectedSnapshotId = newValue
                 Task { await loadTracks() }
@@ -103,19 +108,19 @@ struct PlaylistDetailView: View {
     private var trackTable: some View {
         Table(rows) {
             TableColumn("#") { row in
-                Text("\(row.snapshotTrack.position + 1)").foregroundStyle(VaultTheme.mutedGrey).monospacedDigit()
+                Text("\(row.snapshotTrack.position + 1)").foregroundStyle(VaultTheme.mutedTan).monospacedDigit()
             }
             .width(34)
             TableColumn("Title") { row in Text(row.snapshotTrack.title) }
             TableColumn("Artist") { row in Text(row.snapshotTrack.artistName) }
-            TableColumn("Album") { row in Text(row.snapshotTrack.albumName ?? "—").foregroundStyle(VaultTheme.mutedGrey) }
+            TableColumn("Album") { row in Text(row.snapshotTrack.albumName ?? "—").foregroundStyle(VaultTheme.mutedTan) }
             TableColumn("Time") { row in Text(formatDuration(row.snapshotTrack.durationMs)).monospacedDigit() }
                 .width(56)
             TableColumn("Mapping") { row in
                 if let confidence = row.confidence {
                     MappingConfidenceBadge(score: confidence)
                 } else {
-                    Text("local").font(.caption2).foregroundStyle(VaultTheme.mutedGrey)
+                    Text("local").font(.caption2).foregroundStyle(VaultTheme.mutedTan)
                 }
             }
             .width(72)

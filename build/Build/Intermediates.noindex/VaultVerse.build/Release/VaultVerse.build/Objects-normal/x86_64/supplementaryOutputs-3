@@ -1,0 +1,12 @@
+{
+  "/Users/veerr_89/Work/tools/vault-verse/App/AppEnvironment.swift" : {
+    "abi-baseline-json" : "/Users/veerr_89/Work/tools/vault-verse/build/Build/Intermediates.noindex/VaultVerse.build/Release/VaultVerse.build/Objects-normal/x86_64/VaultVerse.abi.json",
+    "const-values" : "/Users/veerr_89/Work/tools/vault-verse/build/Build/Intermediates.noindex/VaultVerse.build/Release/VaultVerse.build/Objects-normal/x86_64/VaultVerse-primary.swiftconstvalues",
+    "dependencies" : "/Users/veerr_89/Work/tools/vault-verse/build/Build/Intermediates.noindex/VaultVerse.build/Release/VaultVerse.build/Objects-normal/x86_64/VaultVerse-primary.d",
+    "diagnostics" : "/Users/veerr_89/Work/tools/vault-verse/build/Build/Intermediates.noindex/VaultVerse.build/Release/VaultVerse.build/Objects-normal/x86_64/VaultVerse-primary.dia",
+    "objc-header" : "/Users/veerr_89/Work/tools/vault-verse/build/Build/Intermediates.noindex/VaultVerse.build/Release/VaultVerse.build/Objects-normal/x86_64/VaultVerse-Swift.h",
+    "swiftdoc" : "/Users/veerr_89/Work/tools/vault-verse/build/Build/Intermediates.noindex/VaultVerse.build/Release/VaultVerse.build/Objects-normal/x86_64/VaultVerse.swiftdoc",
+    "swiftmodule" : "/Users/veerr_89/Work/tools/vault-verse/build/Build/Intermediates.noindex/VaultVerse.build/Release/VaultVerse.build/Objects-normal/x86_64/VaultVerse.swiftmodule",
+    "swiftsourceinfo" : "/Users/veerr_89/Work/tools/vault-verse/build/Build/Intermediates.noindex/VaultVerse.build/Release/VaultVerse.build/Objects-normal/x86_64/VaultVerse.swiftsourceinfo"
+  }
+}

@@ -30,12 +30,12 @@ struct RestoreFlowView: View {
                     if let report { reportSection(report) }
                 }
                 if let errorText {
-                    Text(errorText).font(.caption).foregroundStyle(Color(hex: 0xA23B3B))
+                    Text(errorText).font(.caption).foregroundStyle(VaultTheme.softRed)
                 }
             }
             .padding(24)
         }
-        .background(VaultTheme.offWhite)
+        .background(VaultTheme.deepCocoa)
         .navigationTitle("Restore — \(playlistTitle)")
         .task { await runPreflight() }
     }
@@ -56,25 +56,35 @@ struct RestoreFlowView: View {
             ForEach(Array(steps.enumerated()), id: \.offset) { index, label in
                 HStack(spacing: 6) {
                     ZStack {
-                        Circle().fill(index <= active ? VaultTheme.actionBlue : VaultTheme.hairline)
+                        Circle().fill(stepColor(index: index, active: active))
                             .frame(width: 22, height: 22)
-                        Text("\(index + 1)").font(.caption2.weight(.bold)).foregroundStyle(.white)
+                        if index < active {
+                            Image(systemName: "checkmark").font(.caption2.weight(.bold)).foregroundStyle(.white)
+                        } else {
+                            Text("\(index + 1)").font(.caption2.weight(.bold)).foregroundStyle(.white)
+                        }
                     }
                     Text(label).font(.caption.weight(index == active ? .semibold : .regular))
-                        .foregroundStyle(index <= active ? VaultTheme.graphite : VaultTheme.mutedGrey)
+                        .foregroundStyle(index <= active ? VaultTheme.warmCream : VaultTheme.mutedTan)
                 }
                 if index < steps.count - 1 {
-                    Rectangle().fill(VaultTheme.hairline).frame(height: 1).frame(maxWidth: 30)
+                    DottedTimeline(active: index < active)
                 }
             }
         }
         .vaultCard(padding: 12)
     }
 
+    private func stepColor(index: Int, active: Int) -> Color {
+        if index < active { return VaultTheme.vaultGreen }   // completed
+        if index == active { return VaultTheme.cherryPink }  // active
+        return VaultTheme.brushedBronze                       // inactive
+    }
+
     private func loadingCard(_ text: String) -> some View {
         HStack(spacing: 12) {
-            ProgressView()
-            Text(text).font(.subheadline).foregroundStyle(VaultTheme.mutedGrey)
+            ProgressView().tint(VaultTheme.cherryPink)
+            Text(text).font(.subheadline).foregroundStyle(VaultTheme.mutedTan)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .vaultCard()
@@ -85,15 +95,15 @@ struct RestoreFlowView: View {
     private func reviewSection(_ preflight: RestorePreflight) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             VStack(alignment: .leading, spacing: 8) {
-                Text("Match summary").font(.headline)
+                Text("Match summary").font(.headline).foregroundStyle(VaultTheme.warmCream)
                 HStack(spacing: 18) {
-                    summaryStat("\(preflight.confidentCount)", "confident", Color(hex: 0x3E8E5E))
-                    summaryStat("\(preflight.reviewCount)", "review", Color(hex: 0xB8772E))
-                    summaryStat("\(preflight.unavailableCount)", "unavailable", VaultTheme.mutedGrey)
-                    summaryStat("\(preflight.unmatchedCount)", "unmatched", Color(hex: 0xA23B3B))
+                    summaryStat("\(preflight.confidentCount)", "confident", VaultTheme.vaultGreen)
+                    summaryStat("\(preflight.reviewCount)", "review", VaultTheme.warmAmber)
+                    summaryStat("\(preflight.unavailableCount)", "unavailable", VaultTheme.warmGrey)
+                    summaryStat("\(preflight.unmatchedCount)", "unmatched", VaultTheme.softRed)
                 }
                 Text("Nothing is created in Apple Music until you confirm.")
-                    .font(.caption).foregroundStyle(VaultTheme.mutedGrey)
+                    .font(.caption).foregroundStyle(VaultTheme.mutedTan)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .vaultCard()
@@ -101,7 +111,7 @@ struct RestoreFlowView: View {
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(preflight.items.sorted { $0.position < $1.position }) { item in
                     itemRow(item)
-                    Divider().overlay(VaultTheme.hairline)
+                    Divider().overlay(VaultTheme.divider)
                 }
             }
             .vaultCard(padding: 0)
@@ -120,20 +130,20 @@ struct RestoreFlowView: View {
     private func summaryStat(_ value: String, _ label: String, _ color: Color) -> some View {
         VStack(spacing: 2) {
             Text(value).font(.system(.title2, design: .rounded).weight(.bold).monospacedDigit()).foregroundStyle(color)
-            Text(label).font(.caption2).foregroundStyle(VaultTheme.mutedGrey)
+            Text(label).font(.caption2).foregroundStyle(VaultTheme.mutedTan)
         }
     }
 
     private func itemRow(_ item: RestorePreflightItem) -> some View {
         HStack(spacing: 10) {
-            Text("\(item.position + 1)").font(.caption.monospacedDigit()).foregroundStyle(VaultTheme.mutedGrey).frame(width: 26, alignment: .trailing)
+            Text("\(item.position + 1)").font(.caption.monospacedDigit()).foregroundStyle(VaultTheme.mutedTan).frame(width: 26, alignment: .trailing)
             VStack(alignment: .leading, spacing: 1) {
-                Text(item.title).font(.subheadline).foregroundStyle(VaultTheme.graphite)
-                Text(item.artist).font(.caption).foregroundStyle(VaultTheme.mutedGrey)
+                Text(item.title).font(.subheadline).foregroundStyle(VaultTheme.warmCream)
+                Text(item.artist).font(.caption).foregroundStyle(VaultTheme.mutedTan)
             }
             Spacer()
             if let reason = item.reason, item.outcome != .confident {
-                Text(reason).font(.caption2).foregroundStyle(VaultTheme.mutedGrey).lineLimit(1).frame(maxWidth: 220, alignment: .trailing)
+                Text(reason).font(.caption2).foregroundStyle(VaultTheme.mutedTan).lineLimit(1).frame(maxWidth: 220, alignment: .trailing)
             }
             OutcomeBadge(outcome: item.outcome)
             if item.outcome == .review || item.outcome == .unmatched {
@@ -158,6 +168,7 @@ struct RestoreFlowView: View {
                 Label("Resolve", systemImage: "wand.and.stars").labelStyle(.iconOnly)
             }
             .menuStyle(.borderlessButton)
+            .tint(VaultTheme.cherryPink)
             .frame(width: 28)
         }
     }
@@ -167,13 +178,13 @@ struct RestoreFlowView: View {
     private func reportSection(_ report: RestoreReport) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Label("Restore complete", systemImage: "checkmark.seal.fill")
-                .font(.title3.weight(.semibold)).foregroundStyle(Color(hex: 0x3E8E5E))
-            Text(report.createdPlaylistName ?? "Restored playlist").font(.headline)
+                .font(.title3.weight(.semibold)).foregroundStyle(VaultTheme.vaultGreen)
+            Text(report.createdPlaylistName ?? "Restored playlist").font(.headline).foregroundStyle(VaultTheme.warmCream)
             HStack(spacing: 18) {
-                summaryStat("\(report.restored)", "restored", Color(hex: 0x3E8E5E))
-                summaryStat("\(report.skipped)", "skipped", VaultTheme.mutedGrey)
-                summaryStat("\(report.failed)", "failed", Color(hex: 0xA23B3B))
-                summaryStat("\(report.total)", "total", VaultTheme.graphite)
+                summaryStat("\(report.restored)", "restored", VaultTheme.vaultGreen)
+                summaryStat("\(report.skipped)", "skipped", VaultTheme.warmGrey)
+                summaryStat("\(report.failed)", "failed", VaultTheme.softRed)
+                summaryStat("\(report.total)", "total", VaultTheme.warmCream)
             }
             if let path = report.missingTracksCSVPath {
                 Button {

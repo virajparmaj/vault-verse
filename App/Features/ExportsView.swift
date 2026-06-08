@@ -10,9 +10,9 @@ struct ExportsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Exports").font(.system(.title2, design: .rounded).weight(.semibold))
+                    Text("Exports").font(.system(.title2, design: .rounded).weight(.semibold)).foregroundStyle(VaultTheme.warmCream)
                     Text("Open backups. Every export is a portable copy — you are never locked into VaultVerse.")
-                        .font(.subheadline).foregroundStyle(VaultTheme.mutedGrey)
+                        .font(.subheadline).foregroundStyle(VaultTheme.mutedTan)
                 }
                 if exports.isEmpty && loaded {
                     EmptyStateView(systemImage: "square.and.arrow.up", title: "No exports yet", message: "Export a playlist as JSON or CSV from its detail page.")
@@ -23,19 +23,19 @@ struct ExportsView: View {
             .padding(24)
         }
         .navigationTitle("Exports")
-        .background(VaultTheme.offWhite)
+        .background(VaultTheme.deepCocoa)
         .task { await load() }
     }
 
     private func row(_ export: Export) -> some View {
         HStack(spacing: 12) {
             Image(systemName: export.format == .json ? "doc.text" : "tablecells")
-                .foregroundStyle(VaultTheme.actionBlue).font(.title3)
+                .foregroundStyle(export.format == .json ? VaultTheme.cherryPink : VaultTheme.mutedTan).font(.title3)
             VStack(alignment: .leading, spacing: 2) {
                 Text(URL(fileURLWithPath: export.fileURL ?? "—").lastPathComponent)
-                    .font(.subheadline).foregroundStyle(VaultTheme.graphite)
+                    .font(.subheadline).foregroundStyle(VaultTheme.warmCream)
                 Text("\(export.format.rawValue.uppercased()) · \(sizeText(export.byteCount)) · \(export.createdAt.formatted(date: .abbreviated, time: .shortened))")
-                    .font(.caption2).foregroundStyle(VaultTheme.mutedGrey)
+                    .font(.caption2).foregroundStyle(VaultTheme.mutedTan)
             }
             Spacer()
             if let path = export.fileURL {

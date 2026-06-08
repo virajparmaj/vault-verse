@@ -2,6 +2,7 @@ import SwiftUI
 
 @main
 struct VaultVerseApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var env = AppEnvironment.makeDefault()
 
     var body: some Scene {
@@ -10,7 +11,8 @@ struct VaultVerseApp: App {
                 .environment(env)
                 .frame(minWidth: 1060, minHeight: 700)
                 .task { await env.refreshConnection() }
-                .tint(VaultTheme.actionBlue)
+                .tint(VaultTheme.cherryPink)
+                .preferredColorScheme(.dark)
         }
         .windowStyle(.titleBar)
         .windowToolbarStyle(.unified)

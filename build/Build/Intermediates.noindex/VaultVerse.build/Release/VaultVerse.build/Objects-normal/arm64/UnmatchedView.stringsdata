@@ -1,0 +1,48 @@
+{
+  "source": "/Users/veerr_89/Work/tools/vault-verse/App/Features/UnmatchedView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Unmatched",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 25
+        }
+      },
+      {
+        "comment": "",
+        "key": "Needs review",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 13
+        }
+      },
+      {
+        "comment": "",
+        "key": "These songs need review. They may be unavailable, renamed, region-locked, or missing from the target catalog.",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 14
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ — %@ [%lld]",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 42
+        }
+      },
+      {
+        "comment": "",
+        "key": "Resolve",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 47
+        }
+      }
+    ]
+  },
+  "version": 1
+}

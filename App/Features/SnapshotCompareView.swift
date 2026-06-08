@@ -22,7 +22,7 @@ struct SnapshotCompareView: View {
             }
             .padding(24)
         }
-        .background(VaultTheme.offWhite)
+        .background(VaultTheme.deepCocoa)
         .navigationTitle("Compare snapshots")
         .task { await load() }
     }
@@ -30,7 +30,7 @@ struct SnapshotCompareView: View {
     private var pickers: some View {
         HStack(spacing: 12) {
             picker("From", selection: $snapshotA)
-            Image(systemName: "arrow.right").foregroundStyle(VaultTheme.mutedGrey)
+            Image(systemName: "arrow.right").foregroundStyle(VaultTheme.mutedTan)
             picker("To", selection: $snapshotB)
         }
         .vaultCard()
@@ -38,7 +38,10 @@ struct SnapshotCompareView: View {
 
     private func picker(_ label: String, selection: Binding<String>) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(label.uppercased()).font(.caption2.weight(.semibold)).foregroundStyle(VaultTheme.mutedGrey)
+            HStack(spacing: 5) {
+                VinylIcon(size: 13)
+                Text(label.uppercased()).font(.caption2.weight(.semibold)).foregroundStyle(VaultTheme.mutedTan)
+            }
             Picker(label, selection: selection) {
                 ForEach(snapshots) { snapshot in
                     Text(snapshot.createdAt.formatted(date: .abbreviated, time: .shortened)).tag(snapshot.id)
@@ -51,12 +54,16 @@ struct SnapshotCompareView: View {
     }
 
     private func summaryCard(_ diff: SnapshotDiff) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(diff.humanSummary).font(.headline).foregroundStyle(VaultTheme.graphite)
-            if diff.titleChanged {
-                Text("Title: “\(diff.oldTitle ?? "—")” → “\(diff.newTitle ?? "—")”")
-                    .font(.caption).foregroundStyle(VaultTheme.mutedGrey)
+        HStack(spacing: 12) {
+            RoundedRectangle(cornerRadius: 2, style: .continuous).fill(VaultTheme.cherryPink).frame(width: 4)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(diff.humanSummary).font(.headline).foregroundStyle(VaultTheme.warmCream)
+                if diff.titleChanged {
+                    Text("Title: “\(diff.oldTitle ?? "—")” → “\(diff.newTitle ?? "—")”")
+                        .font(.caption).foregroundStyle(VaultTheme.mutedTan)
+                }
             }
+            Spacer()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .vaultCard()
@@ -65,11 +72,11 @@ struct SnapshotCompareView: View {
     @ViewBuilder
     private func changeLists(_ diff: SnapshotDiff) -> some View {
         HStack(alignment: .top, spacing: 14) {
-            changeColumn("Added", systemImage: "plus.circle", color: Color(hex: 0x3E8E5E), items: diff.added.map { "\($0.title) — \($0.artist)" })
-            changeColumn("Removed", systemImage: "minus.circle", color: Color(hex: 0xA23B3B), items: diff.removed.map { "\($0.title) — \($0.artist)" })
+            changeColumn("Added", systemImage: "plus.circle", color: VaultTheme.vaultGreen, items: diff.added.map { "\($0.title) — \($0.artist)" })
+            changeColumn("Removed", systemImage: "minus.circle", color: VaultTheme.softRed, items: diff.removed.map { "\($0.title) — \($0.artist)" })
         }
         if !diff.reordered.isEmpty {
-            changeColumn("Reordered", systemImage: "arrow.up.arrow.down", color: VaultTheme.actionBlue,
+            changeColumn("Reordered", systemImage: "arrow.up.arrow.down", color: VaultTheme.cherryPink,
                          items: diff.reordered.map { "\($0.title): #\($0.oldPosition + 1) → #\($0.newPosition + 1)" })
         }
     }
@@ -78,11 +85,11 @@ struct SnapshotCompareView: View {
         VStack(alignment: .leading, spacing: 8) {
             Label("\(title) (\(items.count))", systemImage: systemImage).font(.headline).foregroundStyle(color)
             if items.isEmpty {
-                Text("None").font(.caption).foregroundStyle(VaultTheme.mutedGrey)
+                Text("None").font(.caption).foregroundStyle(VaultTheme.mutedTan)
             } else {
                 ForEach(Array(items.enumerated()), id: \.offset) { _, item in
-                    Text(item).font(.caption).foregroundStyle(VaultTheme.graphite)
-                    Divider().overlay(VaultTheme.hairline)
+                    Text(item).font(.caption).foregroundStyle(VaultTheme.warmCream)
+                    Divider().overlay(VaultTheme.divider)
                 }
             }
         }

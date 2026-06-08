@@ -18,6 +18,8 @@ struct ConnectImportView: View {
         .task { await loadJobs() }
     }
 
+    // MARK: - Connection card
+
     private var connectionCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -27,23 +29,18 @@ struct ConnectImportView: View {
             }
             if let account = env.account {
                 Text(account.displayName ?? "Apple Music user")
-                    .font(.headline).foregroundStyle(VaultTheme.graphite)
+                    .font(.headline).foregroundStyle(VaultTheme.warmCream)
                 Text("Storefront: \(account.storefront?.uppercased() ?? "—") · Connected \(PlaylistCard.relative(account.connectedAt))")
-                    .font(.caption).foregroundStyle(VaultTheme.mutedGrey)
+                    .font(.caption).foregroundStyle(VaultTheme.mutedTan)
             } else {
-                Text("Not connected")
-                    .font(.headline).foregroundStyle(VaultTheme.graphite)
-                Text("VaultVerse runs on demo data in this build. Connecting performs a mock Apple Music authorization — no credentials needed.")
-                    .font(.caption).foregroundStyle(VaultTheme.mutedGrey)
+                Text("Connect Apple Music")
+                    .font(.headline).foregroundStyle(VaultTheme.warmCream)
+                Text("VaultVerse will request permission to read your Apple Music library. It archives playlist metadata only — never audio files or passwords.")
+                    .font(.caption).foregroundStyle(VaultTheme.mutedTan)
             }
-            HStack {
-                Picker("Source", selection: Binding(get: { env.providerMode }, set: { env.providerMode = $0 })) {
-                    ForEach(AppEnvironment.ProviderMode.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-                }
-                .pickerStyle(.segmented).frame(maxWidth: 280)
-                .disabled(true) // live mode is a future build
-                Spacer()
-                if env.isConnected {
+            if env.isConnected {
+                HStack {
+                    Spacer()
                     Button("Disconnect", role: .destructive) { Task { await env.disconnect() } }
                 }
             }
@@ -53,13 +50,15 @@ struct ConnectImportView: View {
 
     private var statusPill: some View {
         let connected = env.isConnected
-        return Text(connected ? "Connected" : "Disconnected")
+        return Text(connected ? "Connected" : "Not connected")
             .font(.caption2.weight(.semibold))
             .padding(.horizontal, 8).padding(.vertical, 3)
-            .background((connected ? Color(hex: 0x3E8E5E) : VaultTheme.mutedGrey).opacity(0.16))
-            .foregroundStyle(connected ? Color(hex: 0x3E8E5E) : VaultTheme.mutedGrey)
+            .background((connected ? VaultTheme.vaultGreen : VaultTheme.warmGrey).opacity(0.16))
+            .foregroundStyle(connected ? VaultTheme.vaultGreen : VaultTheme.warmGrey)
             .clipShape(Capsule())
     }
+
+    // MARK: - Import card
 
     private var importCard: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -67,9 +66,18 @@ struct ConnectImportView: View {
             if env.isImporting, let progress = env.importProgress {
                 VStack(alignment: .leading, spacing: 6) {
                     ProgressView(value: Double(progress.processedPlaylists), total: Double(max(progress.totalPlaylists, 1)))
+                        .tint(VaultTheme.cherryPink)
+                        .overlay(NeedleShimmer(active: env.isImporting).clipShape(Capsule()))
                     Text("Importing \(progress.currentPlaylistName ?? "…") — \(progress.tracksImported) tracks so far")
-                        .font(.caption).foregroundStyle(VaultTheme.mutedGrey)
+                        .font(.caption).foregroundStyle(VaultTheme.mutedTan)
                 }
+            }
+            if let error = env.importError {
+                Label(error, systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption).foregroundStyle(VaultTheme.warmAmber)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(10)
+                    .background(VaultTheme.warmAmber.opacity(0.08), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             }
             Button {
                 Task { await env.connectAndImport(); await loadJobs() }
@@ -84,28 +92,30 @@ struct ConnectImportView: View {
         .vaultCard(padding: 20)
     }
 
+    // MARK: - History card
+
     private var historyCard: some View {
         VStack(alignment: .leading, spacing: 10) {
             SectionHeader(title: "Import history")
             if importJobs.isEmpty {
-                Text("No imports yet.").font(.caption).foregroundStyle(VaultTheme.mutedGrey)
+                Text("No imports yet.").font(.caption).foregroundStyle(VaultTheme.mutedTan)
             } else {
                 ForEach(importJobs) { job in
                     HStack {
                         Image(systemName: job.status == .succeeded ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                            .foregroundStyle(job.status == .succeeded ? Color(hex: 0x3E8E5E) : Color(hex: 0xB8772E))
+                            .foregroundStyle(job.status == .succeeded ? VaultTheme.vaultGreen : VaultTheme.warmAmber)
                         VStack(alignment: .leading, spacing: 1) {
                             Text("\(job.playlistsImported) playlists · \(job.tracksImported) tracks · \(job.snapshotsCreated) snapshots")
-                                .font(.subheadline).foregroundStyle(VaultTheme.graphite)
+                                .font(.subheadline).foregroundStyle(VaultTheme.warmCream)
                             Text(job.startedAt.formatted(date: .abbreviated, time: .shortened))
-                                .font(.caption2).foregroundStyle(VaultTheme.mutedGrey)
+                                .font(.caption2).foregroundStyle(VaultTheme.mutedTan)
                         }
                         Spacer()
                         if !job.errors.isEmpty {
-                            Text("\(job.errors.count) issues").font(.caption2).foregroundStyle(Color(hex: 0xB8772E))
+                            Text("\(job.errors.count) issues").font(.caption2).foregroundStyle(VaultTheme.warmAmber)
                         }
                     }
-                    Divider().overlay(VaultTheme.hairline)
+                    Divider().overlay(VaultTheme.divider)
                 }
             }
         }

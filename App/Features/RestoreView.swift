@@ -19,9 +19,9 @@ struct RestoreView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Restore my library").font(.system(.title2, design: .rounded).weight(.semibold))
+                        Text("Restore my library").font(.system(.title2, design: .rounded).weight(.semibold)).foregroundStyle(VaultTheme.warmCream)
                         Text("Rebuild playlists into Apple Music after resubscribing or switching devices. VaultVerse checks every song before creating anything.")
-                            .font(.subheadline).foregroundStyle(VaultTheme.mutedGrey)
+                            .font(.subheadline).foregroundStyle(VaultTheme.mutedTan)
                     }
                     if entries.isEmpty && loaded {
                         EmptyStateView(systemImage: "arrow.uturn.backward.circle", title: "Nothing to restore yet", message: "Import some playlists first.")
@@ -39,7 +39,7 @@ struct RestoreView: View {
                 .padding(24)
             }
             .navigationTitle("Restore")
-            .background(VaultTheme.offWhite)
+            .background(VaultTheme.deepCocoa)
         }
         .task { await load() }
     }
@@ -48,13 +48,14 @@ struct RestoreView: View {
         HStack(spacing: 14) {
             ArtworkThumbnail(url: entry.playlist.artworkURL, title: entry.playlist.title, size: 52)
             VStack(alignment: .leading, spacing: 3) {
-                Text(entry.playlist.title).font(.headline).foregroundStyle(VaultTheme.graphite)
+                Text(entry.playlist.title).font(.headline).foregroundStyle(VaultTheme.warmCream)
                 Text("\(entry.playlist.trackCount) tracks · restore readiness \(entry.readiness)%")
-                    .font(.caption).foregroundStyle(VaultTheme.mutedGrey)
+                    .font(.caption).foregroundStyle(VaultTheme.mutedTan)
             }
             Spacer()
             ReadinessRing(percent: entry.readiness, size: 44)
-            Image(systemName: "chevron.right").foregroundStyle(VaultTheme.brushedSilver)
+            Watermark(kind: .rewind, size: 26)
+            Image(systemName: "chevron.right").foregroundStyle(VaultTheme.cherryPink)
         }
         .vaultCard()
     }

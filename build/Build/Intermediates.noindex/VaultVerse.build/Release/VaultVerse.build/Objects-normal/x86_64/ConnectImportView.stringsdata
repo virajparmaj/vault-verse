@@ -1,0 +1,120 @@
+{
+  "source": "/Users/veerr_89/Work/tools/vault-verse/App/Features/ConnectImportView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Connections",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 17
+        }
+      },
+      {
+        "comment": "",
+        "key": "Not connected",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 34
+        }
+      },
+      {
+        "comment": "",
+        "key": "VaultVerse runs on demo data in this build. Connecting performs a mock Apple Music authorization — no credentials needed.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 36
+        }
+      },
+      {
+        "comment": "",
+        "key": "Storefront: %@ · Connected %@",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 31
+        }
+      },
+      {
+        "comment": "",
+        "key": "Connected",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 56
+        }
+      },
+      {
+        "comment": "",
+        "key": "Disconnected",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 56
+        }
+      },
+      {
+        "comment": "",
+        "key": "Source",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 40
+        }
+      },
+      {
+        "comment": "",
+        "key": "Disconnect",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 47
+        }
+      },
+      {
+        "comment": "",
+        "key": "Importing %@ — %lld tracks so far",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 70
+        }
+      },
+      {
+        "comment": "",
+        "key": "Importing…",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 77
+        }
+      },
+      {
+        "comment": "",
+        "key": "Connect & import playlists",
+        "location": {
+          "startingColumn": 58,
+          "startingLine": 77
+        }
+      },
+      {
+        "comment": "",
+        "key": "No imports yet.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 91
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld issues",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 105
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld playlists · %lld tracks · %lld snapshots",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 98
+        }
+      }
+    ]
+  },
+  "version": 1
+}

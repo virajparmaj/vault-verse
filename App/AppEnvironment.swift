@@ -3,17 +3,14 @@ import Observation
 import SwiftData
 import VaultVerseCore
 
-/// Dependency container + lightweight app state. Chooses the provider connector
-/// (mock now, live later), owns the `VaultStore`, and vends services. Injected
+/// Dependency container + lightweight app state. Uses `LiveAppleMusicService`
+/// as the provider connector. Owns the `VaultStore` and vends services. Injected
 /// into the view tree via `.environment(_:)`.
 @MainActor
 @Observable
 final class AppEnvironment {
-    enum ProviderMode: String, CaseIterable { case mock = "Demo data", live = "Live Apple Music" }
-
     let store: any VaultStore
-    private(set) var connector: any MusicProviderConnector
-    var providerMode: ProviderMode
+    let connector: any MusicProviderConnector
 
     // UI state
     var isConnected = false
@@ -21,12 +18,12 @@ final class AppEnvironment {
     var isImporting = false
     var importProgress: ImportProgress?
     var lastImport: ImportJob?
+    var importError: String?
     var usingInMemoryFallback = false
 
-    init(store: any VaultStore, connector: any MusicProviderConnector, providerMode: ProviderMode, usingInMemoryFallback: Bool = false) {
+    init(store: any VaultStore, connector: any MusicProviderConnector, usingInMemoryFallback: Bool = false) {
         self.store = store
         self.connector = connector
-        self.providerMode = providerMode
         self.usingInMemoryFallback = usingInMemoryFallback
     }
 
@@ -34,7 +31,6 @@ final class AppEnvironment {
         var fallback = false
         let store: any VaultStore
         do {
-            // Variadic convenience initializer — most robust across SwiftData versions.
             let container = try ModelContainer(
                 for: SDTrack.self, SDPlaylist.self, SDSnapshot.self, SDSnapshotTrack.self,
                 SDMapping.self, SDImportJob.self, SDRestoreJob.self, SDUnmatched.self,
@@ -42,13 +38,11 @@ final class AppEnvironment {
             )
             store = SwiftDataVaultStore(modelContainer: container)
         } catch {
-            // Keep the app usable even if the SwiftData store can't be created.
             store = InMemoryVaultStore()
             fallback = true
         }
-        let connector: any MusicProviderConnector = (try? MockAppleMusicService(latency: .milliseconds(120)))
-            ?? LiveAppleMusicService()
-        return AppEnvironment(store: store, connector: connector, providerMode: .mock, usingInMemoryFallback: fallback)
+        let connector: any MusicProviderConnector = LiveAppleMusicService()
+        return AppEnvironment(store: store, connector: connector, usingInMemoryFallback: fallback)
     }
 
     // MARK: - Services (cheap value types; rebuilt on demand)
@@ -71,6 +65,7 @@ final class AppEnvironment {
         guard !isImporting else { return }
         isImporting = true
         importProgress = nil
+        importError = nil
         defer { isImporting = false }
         do {
             let job = try await importService.run { [weak self] progress in
@@ -80,6 +75,7 @@ final class AppEnvironment {
             await refreshConnection()
         } catch {
             lastImport = nil
+            importError = error.localizedDescription
         }
     }
 

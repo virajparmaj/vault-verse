@@ -40,7 +40,7 @@ struct LibraryView: View {
             .navigationDestination(for: Playlist.self) { playlist in
                 PlaylistDetailView(playlistId: playlist.id)
             }
-            .background(VaultTheme.offWhite)
+            .background(VaultTheme.deepCocoa)
         }
         .task { await load() }
     }
