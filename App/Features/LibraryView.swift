@@ -18,7 +18,14 @@ struct LibraryView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if rows.isEmpty && loaded {
+                if !loaded {
+                    VStack(spacing: 12) {
+                        ProgressView().controlSize(.large).tint(VaultTheme.cherryPink)
+                        Text("Loading your library\u{2026}")
+                            .font(.subheadline).foregroundStyle(VaultTheme.mutedTan)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if rows.isEmpty {
                     EmptyStateView(systemImage: "square.stack",
                                    title: "No playlists archived yet",
                                    message: "Import from Apple Music to fill your vault.")

@@ -31,6 +31,10 @@ re-importable file (with preflight + manual match resolution) → review report.
 Highlights:
 - **Two local sources** — built-in demo data, or your real library from a Music
   "Export Library…" `.xml`. No account, no MusicKit, no signing.
+- **Real imports stick** — VaultVerse remembers your imported `.xml` with a
+  security-scoped bookmark and **auto-reloads the real library on launch** (no
+  re-pick). Importing into a non-empty vault offers to **Replace** demo/seed data so
+  your real library never mixes with the samples.
 - **Versioned snapshots** — re-importing never overwrites; it appends a new,
   checksummed version. "No material change" is detected and skipped.
 - **ISRC-first track matching** with a 0–100 confidence ladder and fuzzy fallback.
@@ -50,7 +54,7 @@ Two layers:
 
 | Layer | What | Build/test |
 |---|---|---|
-| **`VaultVerseCore`** (Swift Package) | All product logic: models, provider connectors, services (import / match / snapshot / restore / export / analytics), repositories. Provider-neutral. | `swift build` / `swift test` — **fully tested (56 tests)** |
+| **`VaultVerseCore`** (Swift Package) | All product logic: models, provider connectors, services (import / match / snapshot / restore / export / analytics), repositories. Provider-neutral. | `swift build` / `swift test` — **fully tested (59 tests)** |
 | **`VaultVerse`** (Xcode app) | SwiftUI UI + SwiftData persistence. Thin shell over the package. | Requires **Xcode** (`xcodegen` + build) |
 
 The connector abstraction (`MusicProviderConnector`) is the seam that keeps one
@@ -64,7 +68,7 @@ vault-verse/
 ├── Package.swift                 # VaultVerseCore + vaultverse-demo + tests
 ├── Sources/VaultVerseCore/       # Models, Providers, Services, Persistence, Security, Support
 ├── Sources/vaultverse-demo/      # headless core-loop walkthrough
-├── Tests/VaultVerseCoreTests/    # 56 unit + integration tests (swift-testing)
+├── Tests/VaultVerseCoreTests/    # 59 unit + integration tests (swift-testing)
 ├── App/                          # SwiftUI app target (built in Xcode)
 │   ├── Features/  Components/  Theme/  Persistence/ (SwiftData)
 ├── project.yml                   # XcodeGen spec → VaultVerse.xcodeproj
@@ -124,6 +128,23 @@ xcodebuild -project VaultVerse.xcodeproj -scheme VaultVerse \
 # → build/Build/Products/Release/VaultVerse.app
 ```
 
+### Rebuild from scratch (copy-paste)
+
+After pulling changes (or any time you want a clean unsigned `.app`), run this one
+block. It regenerates the project, does a clean build, and launches the app:
+
+```bash
+cd /Users/veerr_89/Work/tools/vault-verse
+rm -rf build VaultVerse.xcodeproj          # clean (both are gitignored)
+xcodegen generate                          # project from project.yml
+xcodebuild -project VaultVerse.xcodeproj -scheme VaultVerse \
+  -configuration Release -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
+open build/Build/Products/Release/VaultVerse.app
+```
+
+No paid account, MusicKit entitlement, or code signing required. To verify the core
+engine separately: `swift test` (59 tests) and `swift run vaultverse-demo`.
+
 ### 5. Operate the app
 
 VaultVerse is local-first — no account needed for either source.
@@ -143,8 +164,18 @@ VaultVerse is local-first — no account needed for either source.
 
 1. Open the **Music** app on your Mac.
 2. Menu bar → **File → Library → Export Library…**
-3. Save the `.xml` somewhere you can find it.
+3. Save the `.xml` somewhere you can find it (e.g. your Desktop). It's a plain
+   property-list export of your playlists + track metadata — no audio.
 4. In VaultVerse: **Connections → Import from Apple Music export (.xml)** → choose that file.
+5. If your vault already has playlists (e.g. you loaded the demo), VaultVerse asks
+   **"Replace current library?"** — choose **Replace existing data** to swap the
+   demo out for your real library, or **Add to current library** to keep both.
+
+That's it — your real playlists now appear under **Library**. The import **persists
+across launches**: quit VaultVerse and reopen it and your library is still there with
+the source set to *Apple Music export*, no re-pick needed. (If the `.xml` is later
+moved, deleted, or on an unmounted drive, VaultVerse falls back gracefully and nudges
+you to re-import from **Connections**.)
 
 > **Troubleshooting:** if the build fails on the two SwiftData files (`@Model` /
 > `@ModelActor`), you're still on Command Line Tools — redo **step 2**. Those
@@ -158,7 +189,7 @@ VaultVerse is local-first — no account needed for either source.
 
 ```bash
 swift build                 # compile VaultVerseCore
-swift test                  # run the 56-test suite
+swift test                  # run the 59-test suite
 swift run vaultverse-demo   # headless: connect → import → snapshot → export → restore
 ```
 
@@ -211,7 +242,9 @@ stays inert (`providerNotConfigured`) until you opt in. To enable it later:
 
 ## Roadmap
 
-Persist imported `.xml` access (security-scoped bookmark) → Spotify & YouTube
-connectors (same interface) → live Apple Music write-back (deferred, paid) → cloud
-sync (swap the repository impl) → iOS/iPadOS sharing the package → Replay/Wrapped
-labeling & timeline-of-taste. See `notes/06_roadmap.md`.
+Spotify & YouTube connectors (same interface) → live Apple Music write-back
+(deferred, paid) → cloud sync (swap the repository impl) → iOS/iPadOS sharing the
+package → Replay/Wrapped labeling & timeline-of-taste. See `notes/06_roadmap.md`.
+
+> Imported-`.xml` persistence across launches (security-scoped bookmark) is **done**
+> and shipping today — see *What works today*.

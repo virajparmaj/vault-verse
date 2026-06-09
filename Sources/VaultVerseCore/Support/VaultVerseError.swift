@@ -24,6 +24,9 @@ public enum VaultVerseError: Error, LocalizedError, Sendable, Hashable {
     case persistenceFailure(String)
     case exportFailed(String)
     case invalidInput(String)
+    /// A previously imported library file can no longer be reached on launch
+    /// (moved, deleted, on an unmounted volume, or its saved access went stale).
+    case libraryAccessUnavailable
 
     public var errorDescription: String? {
         switch self {
@@ -64,6 +67,8 @@ public enum VaultVerseError: Error, LocalizedError, Sendable, Hashable {
             return "Export failed: \(detail)"
         case .invalidInput(let detail):
             return "Invalid input: \(detail)"
+        case .libraryAccessUnavailable:
+            return "VaultVerse can't reach your imported Apple Music library anymore. Re-import it from Connections to keep it loaded after relaunch."
         }
     }
 }

@@ -8,6 +8,7 @@ struct DashboardView: View {
     @State private var topAlbums: [NamedCount] = []
     @State private var recurring: [RecurringTrack] = []
     @State private var hoveredInsight: String?
+    @State private var loaded = false
 
     private let columns = [GridItem(.adaptive(minimum: 180), spacing: 14)]
 
@@ -15,7 +16,9 @@ struct DashboardView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
                 hero
-                if let summary, summary.totalPlaylists > 0 {
+                if !loaded {
+                    loadingArchive
+                } else if let summary, summary.totalPlaylists > 0 {
                     statsGrid(summary)
                     insights
                 } else {
@@ -114,6 +117,18 @@ struct DashboardView: View {
         .vaultCard()
     }
 
+    private var loadingArchive: some View {
+        VStack(spacing: 12) {
+            ProgressView().controlSize(.large).tint(VaultTheme.cherryPink)
+            Text("Loading your vault\u{2026}")
+                .font(.subheadline).foregroundStyle(VaultTheme.mutedTan)
+            Text("Crunching playlists, snapshots, and restore readiness.")
+                .font(.caption).foregroundStyle(VaultTheme.warmGrey)
+        }
+        .frame(maxWidth: .infinity, minHeight: 220)
+        .vaultCard(padding: 24)
+    }
+
     private var emptyArchive: some View {
         VStack(spacing: 14) {
             EmptyStateView(
@@ -138,5 +153,6 @@ struct DashboardView: View {
         topArtists = (try? await env.analyticsService.topArtists(limit: 8)) ?? []
         topAlbums = (try? await env.analyticsService.topAlbums(limit: 8)) ?? []
         recurring = (try? await env.analyticsService.songsInMultiplePlaylists()) ?? []
+        loaded = true
     }
 }

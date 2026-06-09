@@ -10,7 +10,10 @@ struct VaultVerseApp: App {
             RootView()
                 .environment(env)
                 .frame(minWidth: 1060, minHeight: 700)
-                .task { await env.refreshConnection() }
+                .task {
+                    await env.restoreActiveLibrary()
+                    await env.refreshConnection()
+                }
                 .tint(VaultTheme.cherryPink)
                 .preferredColorScheme(.dark)
         }

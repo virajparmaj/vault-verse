@@ -5,16 +5,32 @@ import VaultVerseCore
 /// SwiftData-backed implementation of the `VaultStore` contract.
 ///
 /// `@ModelActor` gives this its own actor-isolated `ModelContext`, so it is safe
-/// to share across concurrent service calls. Queries fetch-and-filter in Swift
-/// (data volume is small for a single user) — behavior matches `InMemoryVaultStore`,
-/// which is the reference implementation exercised by the test suite.
+/// to share across concurrent service calls. Behavior matches `InMemoryVaultStore`,
+/// the reference implementation exercised by the test suite.
+///
+/// **Performance:** point lookups use `FetchDescriptor` + `#Predicate` (and
+/// `fetchLimit` for single-row reads) so SQLite filters server-side and we only
+/// materialize matching rows. The earlier "fetch the whole table, filter in Swift"
+/// approach was O(n) per lookup → O(n²) across an import or a dashboard pass, which
+/// made a real (thousands-of-tracks) library appear to hang/load empty.
 @ModelActor
 actor SwiftDataVaultStore: VaultStore {
 
     // MARK: - Generic helpers
 
-    private func fetchAll<T: PersistentModel>(_ type: T.Type) throws -> [T] {
-        try modelContext.fetch(FetchDescriptor<T>())
+    /// Fetch matching rows with an optional sort and limit (server-side filtering).
+    private func fetch<T: PersistentModel>(
+        _ predicate: Predicate<T>,
+        sortBy: [SortDescriptor<T>] = [],
+        limit: Int? = nil
+    ) throws -> [T] {
+        var descriptor = FetchDescriptor<T>(predicate: predicate, sortBy: sortBy)
+        if let limit { descriptor.fetchLimit = limit }
+        return try modelContext.fetch(descriptor)
+    }
+
+    private func fetchAll<T: PersistentModel>(_ type: T.Type, sortBy: [SortDescriptor<T>] = []) throws -> [T] {
+        try modelContext.fetch(FetchDescriptor<T>(sortBy: sortBy))
     }
 
     private func persist() throws {
@@ -29,7 +45,8 @@ actor SwiftDataVaultStore: VaultStore {
     // MARK: - TrackRepository
 
     func upsertTrack(_ track: Track) async throws {
-        if let existing = try fetchAll(SDTrack.self).first(where: { $0.id == track.id }) {
+        let id = track.id
+        if let existing = try fetch(#Predicate<SDTrack> { $0.id == id }, limit: 1).first {
             existing.apply(track)
         } else {
             modelContext.insert(SDTrack(track))
@@ -38,20 +55,24 @@ actor SwiftDataVaultStore: VaultStore {
     }
 
     func track(id: String) async throws -> Track? {
-        try fetchAll(SDTrack.self).first { $0.id == id }?.toDomain()
+        try fetch(#Predicate<SDTrack> { $0.id == id }, limit: 1).first?.toDomain()
     }
 
     func trackByISRC(_ isrc: String) async throws -> Track? {
         guard !isrc.isEmpty else { return nil }
-        return try fetchAll(SDTrack.self).first { $0.isrc?.caseInsensitiveCompare(isrc) == .orderedSame }?.toDomain()
+        // ISRCs are canonical; match case-insensitively to mirror InMemoryVaultStore.
+        let candidates = try fetch(#Predicate<SDTrack> { $0.isrc != nil })
+        return candidates.first { $0.isrc?.caseInsensitiveCompare(isrc) == .orderedSame }?.toDomain()
     }
 
     func findTrack(normalizedTitle: String, normalizedArtist: String, durationMs: Int?, toleranceMs: Int) async throws -> Track? {
-        try fetchAll(SDTrack.self).first { candidate in
-            candidate.normalizedTitle == normalizedTitle
-                && candidate.normalizedArtist == normalizedArtist
-                && Self.close(candidate.durationMs, durationMs, toleranceMs)
-        }?.toDomain()
+        // Narrow on the indexed-ish title+artist match server-side, then apply the
+        // duration tolerance (a range, not expressible in a simple predicate) in Swift
+        // over the (tiny) candidate set.
+        let candidates = try fetch(#Predicate<SDTrack> {
+            $0.normalizedTitle == normalizedTitle && $0.normalizedArtist == normalizedArtist
+        })
+        return candidates.first { Self.close($0.durationMs, durationMs, toleranceMs) }?.toDomain()
     }
 
     func allTracks() async throws -> [Track] {
@@ -61,7 +82,8 @@ actor SwiftDataVaultStore: VaultStore {
     // MARK: - MappingRepository
 
     func upsertMapping(_ mapping: TrackPlatformMapping) async throws {
-        if let existing = try fetchAll(SDMapping.self).first(where: { $0.id == mapping.id }) {
+        let id = mapping.id
+        if let existing = try fetch(#Predicate<SDMapping> { $0.id == id }, limit: 1).first {
             modelContext.delete(existing)
         }
         modelContext.insert(SDMapping(mapping))
@@ -69,11 +91,12 @@ actor SwiftDataVaultStore: VaultStore {
     }
 
     func mappings(forTrack trackId: String) async throws -> [TrackPlatformMapping] {
-        try fetchAll(SDMapping.self).filter { $0.trackId == trackId }.map { $0.toDomain() }
+        try fetch(#Predicate<SDMapping> { $0.trackId == trackId }).map { $0.toDomain() }
     }
 
     func mapping(trackId: String, provider: Provider) async throws -> TrackPlatformMapping? {
-        let candidates = try fetchAll(SDMapping.self).filter { $0.trackId == trackId && $0.provider == provider.rawValue }
+        let providerRaw = provider.rawValue
+        let candidates = try fetch(#Predicate<SDMapping> { $0.trackId == trackId && $0.provider == providerRaw })
         return candidates.sorted {
             if $0.isManualOverride != $1.isManualOverride { return $0.isManualOverride }
             return $0.confidenceScore > $1.confidenceScore
@@ -81,9 +104,10 @@ actor SwiftDataVaultStore: VaultStore {
     }
 
     func manualOverride(trackId: String, provider: Provider) async throws -> TrackPlatformMapping? {
-        try fetchAll(SDMapping.self)
-            .first { $0.trackId == trackId && $0.provider == provider.rawValue && $0.isManualOverride }?
-            .toDomain()
+        let providerRaw = provider.rawValue
+        return try fetch(#Predicate<SDMapping> {
+            $0.trackId == trackId && $0.provider == providerRaw && $0.isManualOverride
+        }, limit: 1).first?.toDomain()
     }
 
     func allMappings() async throws -> [TrackPlatformMapping] {
@@ -93,7 +117,8 @@ actor SwiftDataVaultStore: VaultStore {
     // MARK: - PlaylistRepository
 
     func upsertPlaylist(_ playlist: Playlist) async throws {
-        if let existing = try fetchAll(SDPlaylist.self).first(where: { $0.id == playlist.id }) {
+        let id = playlist.id
+        if let existing = try fetch(#Predicate<SDPlaylist> { $0.id == id }, limit: 1).first {
             existing.apply(playlist)
         } else {
             modelContext.insert(SDPlaylist(playlist))
@@ -102,13 +127,14 @@ actor SwiftDataVaultStore: VaultStore {
     }
 
     func playlist(id: String) async throws -> Playlist? {
-        try fetchAll(SDPlaylist.self).first { $0.id == id }?.toDomain()
+        try fetch(#Predicate<SDPlaylist> { $0.id == id }, limit: 1).first?.toDomain()
     }
 
     func playlist(provider: Provider, sourcePlaylistId: String) async throws -> Playlist? {
-        try fetchAll(SDPlaylist.self)
-            .first { $0.sourceProvider == provider.rawValue && $0.sourcePlaylistId == sourcePlaylistId }?
-            .toDomain()
+        let providerRaw = provider.rawValue
+        return try fetch(#Predicate<SDPlaylist> {
+            $0.sourceProvider == providerRaw && $0.sourcePlaylistId == sourcePlaylistId
+        }, limit: 1).first?.toDomain()
     }
 
     func allPlaylists() async throws -> [Playlist] {
@@ -116,10 +142,13 @@ actor SwiftDataVaultStore: VaultStore {
     }
 
     func deletePlaylist(id: String) async throws {
-        for playlist in try fetchAll(SDPlaylist.self) where playlist.id == id { modelContext.delete(playlist) }
-        let snapshotIds = Set(try fetchAll(SDSnapshot.self).filter { $0.playlistId == id }.map(\.id))
-        for snapshot in try fetchAll(SDSnapshot.self) where snapshot.playlistId == id { modelContext.delete(snapshot) }
-        for track in try fetchAll(SDSnapshotTrack.self) where snapshotIds.contains(track.snapshotId) { modelContext.delete(track) }
+        for playlist in try fetch(#Predicate<SDPlaylist> { $0.id == id }) { modelContext.delete(playlist) }
+        let snapshots = try fetch(#Predicate<SDSnapshot> { $0.playlistId == id })
+        let snapshotIds = snapshots.map(\.id)
+        for snapshot in snapshots { modelContext.delete(snapshot) }
+        for track in try fetch(#Predicate<SDSnapshotTrack> { snapshotIds.contains($0.snapshotId) }) {
+            modelContext.delete(track)
+        }
         try persist()
     }
 
@@ -132,34 +161,36 @@ actor SwiftDataVaultStore: VaultStore {
     }
 
     func snapshot(id: String) async throws -> PlaylistSnapshot? {
-        try fetchAll(SDSnapshot.self).first { $0.id == id }?.toDomain()
+        try fetch(#Predicate<SDSnapshot> { $0.id == id }, limit: 1).first?.toDomain()
     }
 
     func snapshots(forPlaylist playlistId: String) async throws -> [PlaylistSnapshot] {
-        try fetchAll(SDSnapshot.self)
-            .filter { $0.playlistId == playlistId }
-            .sorted { $0.createdAt < $1.createdAt }
-            .map { $0.toDomain() }
+        try fetch(
+            #Predicate<SDSnapshot> { $0.playlistId == playlistId },
+            sortBy: [SortDescriptor(\.createdAt)]
+        ).map { $0.toDomain() }
     }
 
     func latestSnapshot(forPlaylist playlistId: String) async throws -> PlaylistSnapshot? {
-        try fetchAll(SDSnapshot.self)
-            .filter { $0.playlistId == playlistId }
-            .max { $0.createdAt < $1.createdAt }?
-            .toDomain()
+        try fetch(
+            #Predicate<SDSnapshot> { $0.playlistId == playlistId },
+            sortBy: [SortDescriptor(\.createdAt, order: .reverse)],
+            limit: 1
+        ).first?.toDomain()
     }
 
     func snapshotTracks(snapshotId: String) async throws -> [SnapshotTrack] {
-        try fetchAll(SDSnapshotTrack.self)
-            .filter { $0.snapshotId == snapshotId }
-            .sorted { $0.position < $1.position }
-            .map { $0.toDomain() }
+        try fetch(
+            #Predicate<SDSnapshotTrack> { $0.snapshotId == snapshotId },
+            sortBy: [SortDescriptor(\.position)]
+        ).map { $0.toDomain() }
     }
 
     // MARK: - JobRepository
 
     func upsertImportJob(_ job: ImportJob) async throws {
-        if let existing = try fetchAll(SDImportJob.self).first(where: { $0.id == job.id }) {
+        let id = job.id
+        if let existing = try fetch(#Predicate<SDImportJob> { $0.id == id }, limit: 1).first {
             existing.apply(job)
         } else {
             modelContext.insert(SDImportJob(job))
@@ -168,15 +199,16 @@ actor SwiftDataVaultStore: VaultStore {
     }
 
     func importJob(id: String) async throws -> ImportJob? {
-        try fetchAll(SDImportJob.self).first { $0.id == id }?.toDomain()
+        try fetch(#Predicate<SDImportJob> { $0.id == id }, limit: 1).first?.toDomain()
     }
 
     func allImportJobs() async throws -> [ImportJob] {
-        try fetchAll(SDImportJob.self).sorted { $0.startedAt > $1.startedAt }.map { $0.toDomain() }
+        try fetchAll(SDImportJob.self, sortBy: [SortDescriptor(\.startedAt, order: .reverse)]).map { $0.toDomain() }
     }
 
     func upsertRestoreJob(_ job: RestoreJob) async throws {
-        if let existing = try fetchAll(SDRestoreJob.self).first(where: { $0.id == job.id }) {
+        let id = job.id
+        if let existing = try fetch(#Predicate<SDRestoreJob> { $0.id == id }, limit: 1).first {
             existing.apply(job)
         } else {
             modelContext.insert(SDRestoreJob(job))
@@ -185,17 +217,17 @@ actor SwiftDataVaultStore: VaultStore {
     }
 
     func restoreJob(id: String) async throws -> RestoreJob? {
-        try fetchAll(SDRestoreJob.self).first { $0.id == id }?.toDomain()
+        try fetch(#Predicate<SDRestoreJob> { $0.id == id }, limit: 1).first?.toDomain()
     }
 
     func allRestoreJobs() async throws -> [RestoreJob] {
-        try fetchAll(SDRestoreJob.self).sorted { $0.startedAt > $1.startedAt }.map { $0.toDomain() }
+        try fetchAll(SDRestoreJob.self, sortBy: [SortDescriptor(\.startedAt, order: .reverse)]).map { $0.toDomain() }
     }
 
     func upsertUnmatched(_ tracks: [UnmatchedTrack]) async throws {
-        let existing = try fetchAll(SDUnmatched.self)
         for track in tracks {
-            if let match = existing.first(where: { $0.id == track.id }) {
+            let id = track.id
+            if let match = try fetch(#Predicate<SDUnmatched> { $0.id == id }, limit: 1).first {
                 match.apply(track)
             } else {
                 modelContext.insert(SDUnmatched(track))
@@ -205,7 +237,8 @@ actor SwiftDataVaultStore: VaultStore {
     }
 
     func updateUnmatched(_ track: UnmatchedTrack) async throws {
-        if let existing = try fetchAll(SDUnmatched.self).first(where: { $0.id == track.id }) {
+        let id = track.id
+        if let existing = try fetch(#Predicate<SDUnmatched> { $0.id == id }, limit: 1).first {
             existing.apply(track)
         } else {
             modelContext.insert(SDUnmatched(track))
@@ -214,16 +247,17 @@ actor SwiftDataVaultStore: VaultStore {
     }
 
     func unmatched(forRestoreJob jobId: String) async throws -> [UnmatchedTrack] {
-        try fetchAll(SDUnmatched.self)
-            .filter { $0.restoreJobId == jobId }
-            .sorted { $0.createdAt < $1.createdAt }
-            .map { $0.toDomain() }
+        try fetch(
+            #Predicate<SDUnmatched> { $0.restoreJobId == jobId },
+            sortBy: [SortDescriptor(\.createdAt)]
+        ).map { $0.toDomain() }
     }
 
     // MARK: - ExportRepository
 
     func upsertExport(_ export: Export) async throws {
-        if let existing = try fetchAll(SDExport.self).first(where: { $0.id == export.id }) {
+        let id = export.id
+        if let existing = try fetch(#Predicate<SDExport> { $0.id == id }, limit: 1).first {
             modelContext.delete(existing)
         }
         modelContext.insert(SDExport(export))
@@ -231,13 +265,14 @@ actor SwiftDataVaultStore: VaultStore {
     }
 
     func allExports() async throws -> [Export] {
-        try fetchAll(SDExport.self).sorted { $0.createdAt > $1.createdAt }.map { $0.toDomain() }
+        try fetchAll(SDExport.self, sortBy: [SortDescriptor(\.createdAt, order: .reverse)]).map { $0.toDomain() }
     }
 
     // MARK: - ConnectedAccountRepository
 
     func upsertAccount(_ account: ConnectedAccount) async throws {
-        if let existing = try fetchAll(SDAccount.self).first(where: { $0.id == account.id }) {
+        let id = account.id
+        if let existing = try fetch(#Predicate<SDAccount> { $0.id == id }, limit: 1).first {
             existing.apply(account)
         } else {
             modelContext.insert(SDAccount(account))
@@ -246,7 +281,8 @@ actor SwiftDataVaultStore: VaultStore {
     }
 
     func account(provider: Provider) async throws -> ConnectedAccount? {
-        try fetchAll(SDAccount.self).first { $0.provider == provider.rawValue }?.toDomain()
+        let providerRaw = provider.rawValue
+        return try fetch(#Predicate<SDAccount> { $0.provider == providerRaw }, limit: 1).first?.toDomain()
     }
 
     func allAccounts() async throws -> [ConnectedAccount] {
@@ -254,7 +290,7 @@ actor SwiftDataVaultStore: VaultStore {
     }
 
     func deleteAccount(id: String) async throws {
-        for account in try fetchAll(SDAccount.self) where account.id == id { modelContext.delete(account) }
+        for account in try fetch(#Predicate<SDAccount> { $0.id == id }) { modelContext.delete(account) }
         try persist()
     }
 

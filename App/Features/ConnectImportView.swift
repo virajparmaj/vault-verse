@@ -6,6 +6,8 @@ struct ConnectImportView: View {
     @Environment(AppEnvironment.self) private var env
     @State private var importJobs: [ImportJob] = []
     @State private var showFileImporter = false
+    @State private var pendingImportURL: URL?
+    @State private var showReplaceDialog = false
 
     var body: some View {
         ScrollView {
@@ -26,11 +28,45 @@ struct ConnectImportView: View {
             switch result {
             case .success(let urls):
                 guard let url = urls.first else { return }
-                Task { await env.importAppleMusicExport(url: url); await loadJobs() }
+                Task { await beginImport(url) }
             case .failure(let error):
                 env.importError = error.localizedDescription
             }
         }
+        .confirmationDialog(
+            "Replace current library?",
+            isPresented: $showReplaceDialog,
+            titleVisibility: .visible,
+            presenting: pendingImportURL
+        ) { url in
+            Button("Replace existing data", role: .destructive) {
+                Task { await runImport(url, replacingExisting: true) }
+            }
+            Button("Add to current library") {
+                Task { await runImport(url, replacingExisting: false) }
+            }
+            Button("Cancel", role: .cancel) { pendingImportURL = nil }
+        } message: { _ in
+            Text("Your vault already has playlists — including the demo library if you loaded it. Replacing erases them first so only your imported library remains. Adding keeps everything.")
+        }
+    }
+
+    /// Decide between a clean replace and a merge before importing. A first import
+    /// into an empty vault skips the prompt entirely.
+    private func beginImport(_ url: URL) async {
+        let hasExisting = !(((try? await env.store.allPlaylists()) ?? []).isEmpty)
+        if hasExisting {
+            pendingImportURL = url
+            showReplaceDialog = true
+        } else {
+            await runImport(url, replacingExisting: false)
+        }
+    }
+
+    private func runImport(_ url: URL, replacingExisting: Bool) async {
+        await env.importAppleMusicExport(url: url, replacingExisting: replacingExisting)
+        await loadJobs()
+        pendingImportURL = nil
     }
 
     // MARK: - Source card

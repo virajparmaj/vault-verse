@@ -97,17 +97,86 @@ final class AppEnvironment {
     }
 
     /// Parse a user-selected Music "Export Library…" `.xml` and import it.
-    func importAppleMusicExport(url: URL) async {
-        let didAccess = url.startAccessingSecurityScopedResource()
-        defer { if didAccess { url.stopAccessingSecurityScopedResource() } }
+    ///
+    /// When `replacingExisting` is true the vault is wiped first (after the file is
+    /// validated, so a bad pick never destroys existing data) so a real import
+    /// doesn't leave demo/seed playlists behind. A security-scoped bookmark is saved
+    /// so the next launch re-reads the same file without a re-pick.
+    func importAppleMusicExport(url: URL, replacingExisting: Bool) async {
+        let connector: LibraryXMLConnector
         do {
-            let data = try Data(contentsOf: url)
-            let connector = try LibraryXMLConnector(data: data)
-            activate(source: .appleMusicExport, connector: connector)
-            await connectAndImport()
+            connector = try Self.loadExportConnector(at: url)
         } catch {
             importError = error.localizedDescription
+            return
         }
+
+        // Remember access for next launch. Non-fatal: the data still lands in the
+        // vault, so a failure here is surfaced as a soft warning only.
+        let accessWarning: String?
+        do {
+            try LibraryBookmarkStore.save(for: url)
+            accessWarning = nil
+        } catch {
+            accessWarning = error.localizedDescription
+        }
+
+        if replacingExisting { await deleteAllData() }
+        activate(source: .appleMusicExport, connector: connector)
+        await connectAndImport()
+
+        // `connectAndImport()` resets `importError` on entry, so raise the access
+        // warning only when the import itself didn't already report a problem.
+        if importError == nil, let accessWarning {
+            importError = accessWarning
+        }
+    }
+
+    /// Re-point the active connector at the real library on launch.
+    ///
+    /// The vault's records already persist in `store`; what's otherwise lost across
+    /// launches is the *live* connector (restore/search/re-import read from it). When
+    /// the saved source is the Apple Music export and a security-scoped bookmark
+    /// exists, resolve it, re-read + re-parse the file, and swap in a fresh
+    /// `LibraryXMLConnector` so the active source is the real library — not the empty
+    /// launch placeholder. Any failure leaves the placeholder in place and surfaces a
+    /// friendly re-import nudge; no bookmark at all is the normal "nothing imported
+    /// yet" state and stays silent.
+    func restoreActiveLibrary() async {
+        guard source == .appleMusicExport else { return }
+
+        let resolved: (url: URL, isStale: Bool)?
+        do {
+            resolved = try LibraryBookmarkStore.resolve()
+        } catch {
+            importError = error.localizedDescription
+            return
+        }
+        guard let resolved else { return }
+
+        do {
+            let connector = try Self.loadExportConnector(at: resolved.url)
+            activate(source: .appleMusicExport, connector: connector)
+            // Bookmark drifted (file moved/renamed) but still resolved — refresh it
+            // so the next launch resolves cleanly.
+            if resolved.isStale { try? LibraryBookmarkStore.save(for: resolved.url) }
+        } catch let vvError as VaultVerseError {
+            importError = vvError.localizedDescription
+        } catch {
+            importError = VaultVerseError.libraryAccessUnavailable.localizedDescription
+        }
+    }
+
+    /// Read + parse a `Library.xml` at `url` into a connector, holding
+    /// security-scoped access for the read. Throws a `VaultVerseError` the UI can
+    /// show directly (via `LibraryXMLConnector`/`LibraryXMLParser`). Shared by the
+    /// import flow (URL from the file picker) and launch rehydration (URL resolved
+    /// from a saved bookmark).
+    private static func loadExportConnector(at url: URL) throws -> LibraryXMLConnector {
+        let didAccess = url.startAccessingSecurityScopedResource()
+        defer { if didAccess { url.stopAccessingSecurityScopedResource() } }
+        let data = try Data(contentsOf: url)
+        return try LibraryXMLConnector(data: data)
     }
 
     // MARK: - Actions
